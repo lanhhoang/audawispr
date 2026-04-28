@@ -13,5 +13,9 @@ class TranscriptionError(AudawisprError):
     """Raised when local transcription cannot produce a valid manifest."""
 
 
+class SegmentationError(AudawisprError):
+    """Raised when transcript segments cannot be rebuilt."""
+
+
 class ManifestError(AudawisprError):
     """Raised when a manifest cannot be loaded, saved, or validated."""

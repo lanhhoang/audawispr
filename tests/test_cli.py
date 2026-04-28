@@ -24,6 +24,7 @@ def test_help_displays_cli_name() -> None:
     assert result.exit_code == 0
     assert "audawispr" in output
     assert "doctor" in output
+    assert "segment" in output
     assert "transcribe" in output
     assert "validate" in output
 
@@ -68,6 +69,23 @@ def test_validate_help_displays_manifest_argument() -> None:
 
     assert result.exit_code == 0
     assert "MANIFEST" in output
+
+
+def test_segment_help_displays_phase_3_options() -> None:
+    result = runner.invoke(
+        app,
+        ["segment", "--help"],
+        env={"GITHUB_ACTIONS": "true"},
+    )
+    output = _normalize_terminal_output(result.stdout)
+
+    assert result.exit_code == 0
+    assert "--output" in output
+    assert "--inspection-tsv" in output
+    assert "--pause-split-ms" in output
+    assert "--min-duration-ms" in output
+    assert "--max-duration-ms" in output
+    assert "--merge-short" in output
 
 
 def test_validate_rejects_malformed_json(tmp_path) -> None:
@@ -155,7 +173,124 @@ def test_transcribe_reports_missing_input_audio(tmp_path) -> None:
     assert "input audio does not exist" in result.stderr
 
 
-def _make_manifest(path: str = "/tmp/lesson.mp3") -> TranscriptManifest:
+def test_segment_writes_manifest_and_default_tsv(tmp_path) -> None:
+    input_path = tmp_path / "transcript.json"
+    output_path = tmp_path / "nested" / "segments.json"
+    input_path.write_text(
+        _make_manifest(
+            words=[
+                TranscriptWord(text="Bonjour.", start=0.0, end=0.7),
+                TranscriptWord(text="Encore.", start=0.8, end=1.4),
+            ]
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["segment", str(input_path), "--output", str(output_path)],
+    )
+
+    assert result.exit_code == 0
+    assert "Wrote segmented manifest" in result.stdout
+    assert "Wrote inspection TSV" in result.stdout
+    assert output_path.exists()
+    assert output_path.with_suffix(".tsv").exists()
+
+
+def test_segment_writes_explicit_tsv_path(tmp_path) -> None:
+    input_path = tmp_path / "transcript.json"
+    output_path = tmp_path / "segments.json"
+    tsv_path = tmp_path / "inspection" / "review.tsv"
+    input_path.write_text(_make_manifest().model_dump_json(), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "segment",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--inspection-tsv",
+            str(tsv_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert tsv_path.exists()
+
+
+def test_segment_reports_invalid_options(tmp_path) -> None:
+    input_path = tmp_path / "transcript.json"
+    input_path.write_text(_make_manifest().model_dump_json(), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "segment",
+            str(input_path),
+            "--output",
+            str(tmp_path / "segments.json"),
+            "--min-duration-ms",
+            "1000",
+            "--max-duration-ms",
+            "500",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "max_duration_ms" in result.stderr
+
+
+def test_segment_reports_invalid_manifest(tmp_path) -> None:
+    manifest_path = tmp_path / "bad.json"
+    manifest_path.write_text("{", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["segment", str(manifest_path), "--output", str(tmp_path / "segments.json")],
+    )
+
+    assert result.exit_code == 1
+    assert "not valid JSON" in result.stderr
+
+
+def test_segment_reports_output_write_failure(tmp_path) -> None:
+    input_path = tmp_path / "transcript.json"
+    output_path = tmp_path / "output-dir"
+    output_path.mkdir()
+    input_path.write_text(_make_manifest().model_dump_json(), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["segment", str(input_path), "--output", str(output_path)],
+    )
+
+    assert result.exit_code == 1
+    assert "could not save manifest" in result.stderr
+
+
+def _make_manifest(
+    path: str = "/tmp/lesson.mp3",
+    words: list[TranscriptWord] | None = None,
+) -> TranscriptManifest:
+    return _make_manifest_with_words(
+        path,
+        words
+        or [
+            TranscriptWord(
+                text="Bonjour",
+                start=0.0,
+                end=0.8,
+            )
+        ],
+    )
+
+
+def _make_manifest_with_words(
+    path: str,
+    words: list[TranscriptWord],
+) -> TranscriptManifest:
     return TranscriptManifest(
         language="fr",
         source_audio=SourceAudio(
@@ -174,16 +309,10 @@ def _make_manifest(path: str = "/tmp/lesson.mp3") -> TranscriptManifest:
         segments=[
             TranscriptSegment(
                 id="seg-0000",
-                start=0.0,
-                end=1.0,
-                text="Bonjour.",
-                words=[
-                    TranscriptWord(
-                        text="Bonjour",
-                        start=0.0,
-                        end=0.8,
-                    )
-                ],
+                start=words[0].start,
+                end=words[-1].end,
+                text=" ".join(word.text for word in words),
+                words=words,
             )
         ],
     )
