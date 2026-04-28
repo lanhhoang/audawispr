@@ -16,30 +16,31 @@ manifest without any transcription API key.
 
 ## TODO
 
-- [ ] Add `faster-whisper`, `onnxruntime`, and `pydantic` runtime
+- [x] Add `faster-whisper`, `onnxruntime`, and `pydantic` runtime
   dependencies.
-- [ ] Confirm dependency resolution for `faster-whisper` and `onnxruntime` in CI
-  on Linux, macOS, and Windows without downloading Whisper models.
-- [ ] Define manifest models with schema version, app version, timestamps,
+- [x] Confirm dependency resolution for `faster-whisper` and `onnxruntime`
+  locally without downloading Whisper models. Remote Linux, macOS, and Windows
+  CI confirmation is pending.
+- [x] Define manifest models with schema version, app version, timestamps,
   language, source audio metadata, transcription settings, segments, and words.
-- [ ] Implement manifest save/load/validation helpers with atomic JSON writes.
-- [ ] Add `audawispr validate MANIFEST` for strict schema and timestamp
+- [x] Implement manifest save/load/validation helpers with atomic JSON writes.
+- [x] Add `audawispr validate MANIFEST` for strict schema and timestamp
   validation.
-- [ ] Implement source audio metadata generation including file name, absolute
+- [x] Implement source audio metadata generation including file name, absolute
   path, size, SHA-256, language, and optional duration.
-- [ ] Implement transcription core using `faster-whisper` with word timestamps
+- [x] Implement transcription core using `faster-whisper` with word timestamps
   and VAD enabled by default.
-- [ ] Treat missing word timestamps from transcription as a transcription error,
+- [x] Treat missing word timestamps from transcription as a transcription error,
   because Phase 3 segmentation requires them.
-- [ ] Add `audawispr transcribe` CLI options for input path, output path,
+- [x] Add `audawispr transcribe` CLI options for input path, output path,
   language, model size, device, compute type, and VAD.
-- [ ] Add clear errors for missing input audio, missing dependency, model
+- [x] Add clear errors for missing input audio, missing dependency, model
   initialization failure, and invalid generated manifest.
-- [ ] Add tests with fake Whisper output to avoid requiring real model downloads
+- [x] Add tests with fake Whisper output to avoid requiring real model downloads
   in unit tests.
-- [ ] Ensure CI transcription tests use fakes or mocks and never download Whisper
+- [x] Ensure CI transcription tests use fakes or mocks and never download Whisper
   models.
-- [ ] Update README with `transcribe` and `validate` command usage.
+- [x] Update README with `transcribe` and `validate` command usage.
 
 ## Defaults
 
@@ -54,14 +55,14 @@ manifest without any transcription API key.
 
 ## Acceptance Checks
 
-- [ ] `uv run pytest`
-- [ ] `uv run ruff check .`
-- [ ] `uv run ruff format --check .`
-- [ ] `uv run ty check src tests`
-- [ ] `uv run audawispr transcribe --help`
-- [ ] `uv run audawispr validate --help`
+- [x] `uv run pytest`
+- [x] `uv run ruff check .`
+- [x] `uv run ruff format --check .`
+- [x] `uv run ty check src tests`
+- [x] `uv run audawispr transcribe --help`
+- [x] `uv run audawispr validate --help`
 - [ ] CI quality workflow passes.
-- [ ] README documents Phase 2 commands.
+- [x] README documents Phase 2 commands.
 
 ## Notes
 
@@ -75,7 +76,16 @@ manifest without any transcription API key.
 
 ## Verification Evidence
 
-- Pending.
+- `uv sync --dev` resolved dependencies with `onnxruntime==1.22.1`, avoiding
+  the latest ONNX Runtime wheel line that does not support macOS x86_64.
+- `uv sync --dev --frozen` passed.
+- `uv run pytest` passed: 21 tests.
+- `uv run ruff check .` passed.
+- `uv run ty check src tests` passed.
+- `uv run audawispr transcribe --help` passed.
+- `uv run audawispr validate --help` passed.
+- `uv run ruff format --check .` passed: 16 files already formatted.
+- Remote CI is pending.
 
 ## Actual Implementation
 
@@ -91,47 +101,47 @@ Phase 2 can start from the current Phase 1 baseline. The branch is clean, matche
 Use the following implementation order so the feature stays usable and testable
 while it is being built:
 
-- [ ] Add runtime dependencies: `faster-whisper`, `onnxruntime`, and
+- [x] Add runtime dependencies: `faster-whisper`, `onnxruntime`, and
   `pydantic>=2`.
-- [ ] Confirm `uv sync --dev` and `uv sync --dev --frozen` resolve dependencies
+- [x] Confirm `uv sync --dev` and `uv sync --dev --frozen` resolve dependencies
   without downloading Whisper models.
-- [ ] Add Pydantic v2 manifest models for schema version, app version,
+- [x] Add Pydantic v2 manifest models for schema version, app version,
   creation timestamp, source audio metadata, transcription settings, language,
   segments, and words.
-- [ ] Validate manifest timing with non-negative timestamps, `start <= end`, and
+- [x] Validate manifest timing with non-negative timestamps, `start <= end`, and
   word timestamps inside segment bounds where available.
-- [ ] Implement atomic JSON save/load helpers using a temporary file in the
+- [x] Implement atomic JSON save/load helpers using a temporary file in the
   destination directory followed by replace.
-- [ ] Implement source audio metadata collection for file name, resolved absolute
+- [x] Implement source audio metadata collection for file name, resolved absolute
   path string, byte size, SHA-256, language, and best-effort duration.
-- [ ] Keep duration optional: use FFprobe when available, but do not fail
+- [x] Keep duration optional: use FFprobe when available, but do not fail
   transcription solely because duration cannot be read.
-- [ ] Fail before model initialization when input audio is missing, is a
+- [x] Fail before model initialization when input audio is missing, is a
   directory, or cannot be read.
-- [ ] Add a transcription backend boundary so tests can inject fake Whisper
+- [x] Add a transcription backend boundary so tests can inject fake Whisper
   output and future `whisper.cpp` support can reuse the CLI contract.
-- [ ] Implement the `faster-whisper` backend with defaults:
+- [x] Implement the `faster-whisper` backend with defaults:
   `language=fr`, `model_size=small`, `device=auto`, `compute_type=int8`,
   `vad=true`, and `word_timestamps=true`.
-- [ ] Materialize the Whisper segment generator before writing the manifest so
+- [x] Materialize the Whisper segment generator before writing the manifest so
   transcription errors surface before any final output file is replaced.
-- [ ] Treat missing word timestamps as a hard transcription error.
-- [ ] Add `audawispr transcribe AUDIO --output out/transcript.json --language fr`
+- [x] Treat missing word timestamps as a hard transcription error.
+- [x] Add `audawispr transcribe AUDIO --output out/transcript.json --language fr`
   with options for model size, device, compute type, and VAD.
-- [ ] Add `audawispr validate MANIFEST` for strict schema and timestamp
+- [x] Add `audawispr validate MANIFEST` for strict schema and timestamp
   validation.
-- [ ] Map common failures to clear CLI errors with non-zero exits: missing input,
+- [x] Map common failures to clear CLI errors with non-zero exits: missing input,
   invalid manifest, missing dependency, model initialization failure,
   transcription failure, and output write failure.
-- [ ] Add tests for manifest validation, atomic save/load, source metadata, fake
+- [x] Add tests for manifest validation, atomic save/load, source metadata, fake
   transcription output, missing word timestamps, CLI help, CLI validation
   success/failure, and CLI transcribe using a fake backend.
-- [ ] Ensure normal CI imports and tests transcription code without downloading
+- [x] Ensure normal CI imports and tests transcription code without downloading
   Whisper models.
-- [ ] Update `README.md` with Phase 2 usage and note that first real model use
+- [x] Update `README.md` with Phase 2 usage and note that first real model use
   may download model files.
 - [ ] After implementation, update this phase's verification evidence and mark
-  Phase 2 complete in `tasks/epic-1.md`.
+  Phase 2 complete in `tasks/epic-1.md` after remote CI passes.
 
 Implementation assumptions:
 
