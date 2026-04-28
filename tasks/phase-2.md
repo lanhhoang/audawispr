@@ -19,8 +19,8 @@ manifest without any transcription API key.
 - [x] Add `faster-whisper`, `onnxruntime`, and `pydantic` runtime
   dependencies.
 - [x] Confirm dependency resolution for `faster-whisper` and `onnxruntime`
-  locally without downloading Whisper models. Remote Linux, macOS, and Windows
-  CI confirmation is pending.
+  locally and in remote Linux, macOS, and Windows CI without downloading
+  Whisper models.
 - [x] Define manifest models with schema version, app version, timestamps,
   language, source audio metadata, transcription settings, segments, and words.
 - [x] Implement manifest save/load/validation helpers with atomic JSON writes.
@@ -61,7 +61,7 @@ manifest without any transcription API key.
 - [x] `uv run ty check src tests`
 - [x] `uv run audawispr transcribe --help`
 - [x] `uv run audawispr validate --help`
-- [ ] CI quality workflow passes.
+- [x] CI quality workflow passes.
 - [x] README documents Phase 2 commands.
 
 ## Notes
@@ -85,7 +85,8 @@ manifest without any transcription API key.
 - `uv run audawispr transcribe --help` passed.
 - `uv run audawispr validate --help` passed.
 - `uv run ruff format --check .` passed: 16 files already formatted.
-- Remote CI is pending.
+- Remote GitHub Actions passed on Ubuntu, macOS, and Windows after the
+  help-output test fix.
 
 ## Actual Implementation
 
@@ -140,7 +141,7 @@ while it is being built:
   Whisper models.
 - [x] Update `README.md` with Phase 2 usage and note that first real model use
   may download model files.
-- [ ] After implementation, update this phase's verification evidence and mark
+- [x] After implementation, update this phase's verification evidence and mark
   Phase 2 complete in `tasks/epic-1.md` after remote CI passes.
 
 Implementation assumptions:
@@ -186,14 +187,14 @@ Verification plan:
 - [x] `uv run ty check src tests`
 - [x] `uv run audawispr transcribe --help`
 - [x] `uv run audawispr validate --help`
-- [ ] Push and verify GitHub Actions passes on Ubuntu, macOS, and Windows.
+- [x] Push and verify GitHub Actions passes on Ubuntu, macOS, and Windows.
 
 Documentation decision:
 
 - No README change is needed because this is a test-rendering issue, not a
   behavior or usage change.
-- After fixing, update this section with verification evidence and keep the
-  Phase 2 CI checkbox pending until remote CI passes.
+- After fixing, update this section with verification evidence and mark the
+  Phase 2 CI checkbox complete once remote CI passes.
 
 Verification evidence:
 
@@ -205,3 +206,4 @@ Verification evidence:
 - `uv run ty check src tests` passed.
 - `uv run audawispr transcribe --help` passed.
 - `uv run audawispr validate --help` passed.
+- Remote GitHub Actions passed on Ubuntu, macOS, and Windows.
