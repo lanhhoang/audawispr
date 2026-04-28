@@ -51,7 +51,7 @@ before any audio clipping or Anki export exists.
 - [x] `uv run audawispr segment --help`
 - [x] `uv run audawispr validate out/segments.json` succeeds for a fixture
   segmented manifest.
-- [ ] CI quality workflow passes.
+- [x] CI quality workflow passes.
 - [x] README documents Phase 3 command.
 
 ## Notes
@@ -72,7 +72,11 @@ before any audio clipping or Anki export exists.
 - `uv run audawispr segment /tmp/audawispr-phase3-transcript.json --output
   /tmp/audawispr-phase3-segments.json` passed.
 - `uv run audawispr validate /tmp/audawispr-phase3-segments.json` passed.
-- Remote CI is pending.
+- `uv run audawispr segment out/transcript.json --output out/segments.json`
+  passed against a real local transcript and wrote `out/segments.json` plus
+  `out/segments.tsv`.
+- `uv run audawispr validate out/segments.json` passed.
+- Remote GitHub Actions passed.
 
 ## Actual Implementation
 

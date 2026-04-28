@@ -20,7 +20,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 |---|-------|--------|
 | 1 | [Project Foundation + Diagnostics](phase-1.md) | ✅ Done |
 | 2 | [Local Transcription To Manifest](phase-2.md) | ✅ Done |
-| 3 | [Sentence Segmentation + Inspection TSV](phase-3.md) | ⬜ Planned |
+| 3 | [Sentence Segmentation + Inspection TSV](phase-3.md) | ✅ Done |
 | 4 | [IPA Enrichment + Translation Stubs](phase-4.md) | ⬜ Planned |
 | 5 | [Audio Snippet Clipping](phase-5.md) | ⬜ Planned |
 | 6 | [Importable Anki CSV Export](phase-6.md) | ⬜ Planned |
@@ -31,7 +31,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 
 - [x] Phase 1: Project Foundation + Diagnostics
 - [x] Phase 2: Local Transcription To Manifest
-- [ ] Phase 3: Sentence Segmentation + Inspection TSV
+- [x] Phase 3: Sentence Segmentation + Inspection TSV
 - [ ] Phase 4: IPA Enrichment + Translation Stubs
 - [ ] Phase 5: Audio Snippet Clipping
 - [ ] Phase 6: Importable Anki CSV Export
