@@ -20,6 +20,7 @@ directly from an audio file with one command.
   suitable for CLI and future app wrappers.
 - [ ] Implement pipeline orchestration over transcribe, segment, enrich, clip,
   and export phases.
+- [ ] Skip the enrich phase when `--ipa` is false and translation is `none`.
 - [ ] Store intermediate manifests and snippets under a work directory for
   reruns and debugging.
 - [ ] Add root Typer callback/command for `audawispr AUDIO --output deck.apkg`.
@@ -35,6 +36,8 @@ directly from an audio file with one command.
 - Intermediate work directory is derived from the output path:
   - `deck.apkg` uses `deck/_work/`
   - directory output uses `<output>/_work/`
+- For `deck.apkg`, `deck/_work/` is a sibling directory next to the APKG path,
+  not content inside the APKG package.
 - Implement work directory paths with `Path` joins. The `/` examples above are
   documentation shorthand, not string concatenation requirements.
 - Translation remains `none` only in Epic 1.
@@ -46,6 +49,7 @@ directly from an audio file with one command.
 - [ ] One-shot CLI tests with mocked transcription.
 - [ ] Python facade tests.
 - [ ] Tests for intermediate output paths.
+- [ ] Tests that enrichment is skipped when no IPA or translation is requested.
 - [ ] Tests that one-shot work directory derivation is correct with Windows-style
   and POSIX-style paths.
 - [ ] Tests for phase-specific error messages.
@@ -58,6 +62,7 @@ directly from an audio file with one command.
 - [ ] `uv run audawispr --help`
 - [ ] `uv run audawispr doctor`
 - [ ] CI quality workflow passes.
+- [ ] README documents one-shot CLI and Python facade usage.
 
 ## Notes
 

@@ -39,6 +39,9 @@ waiting for native `.apkg` support.
   `TimestampRange`, `SegmentId`.
 - Copied media goes under `<output>/media/`.
 - Audio references in CSV use media basenames only, not OS-specific paths.
+- CSV export is manual-import assisted, not a fully self-contained import. The
+  README must explain that media may need to be copied into Anki's collection
+  media folder depending on the user's import flow.
 
 ## Acceptance Checks
 
@@ -48,6 +51,7 @@ waiting for native `.apkg` support.
 - [ ] Tests for UTF-8 text and newline-safe CSV output.
 - [ ] Tests for missing snippet errors.
 - [ ] Tests for deterministic reruns.
+- [ ] README documents CSV import and media handling.
 - [ ] `uv run pytest`
 - [ ] `uv run ruff check .`
 - [ ] `uv run ruff format --check .`

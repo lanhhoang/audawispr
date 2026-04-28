@@ -1,4 +1,4 @@
-# Phase 3: Sentence Segmentation + Review TSV
+# Phase 3: Sentence Segmentation + Inspection TSV
 
 ## Goal
 
@@ -27,6 +27,7 @@ before any audio clipping or Anki export exists.
 - [ ] Add `audawispr segment` CLI with output and inspection TSV options.
 - [ ] Add clear errors for manifests with no word timestamps, invalid options,
   invalid timestamps, and validation failure.
+- [ ] Update README with `segment` command usage and inspection TSV behavior.
 
 ## Defaults
 
@@ -48,7 +49,10 @@ before any audio clipping or Anki export exists.
 - [ ] `uv run ruff format --check .`
 - [ ] `uv run ty check src tests`
 - [ ] `uv run audawispr segment --help`
+- [ ] `uv run audawispr validate out/segments.json` succeeds for a fixture
+  segmented manifest.
 - [ ] CI quality workflow passes.
+- [ ] README documents Phase 3 command.
 
 ## Notes
 

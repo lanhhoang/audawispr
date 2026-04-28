@@ -20,7 +20,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 |---|-------|--------|
 | 1 | [Project Foundation + Diagnostics](phase-1.md) | ⬜ Planned |
 | 2 | [Local Transcription To Manifest](phase-2.md) | ⬜ Planned |
-| 3 | [Sentence Segmentation + Review TSV](phase-3.md) | ⬜ Planned |
+| 3 | [Sentence Segmentation + Inspection TSV](phase-3.md) | ⬜ Planned |
 | 4 | [IPA Enrichment + Translation Stubs](phase-4.md) | ⬜ Planned |
 | 5 | [Audio Snippet Clipping](phase-5.md) | ⬜ Planned |
 | 6 | [Importable Anki CSV Export](phase-6.md) | ⬜ Planned |
@@ -31,7 +31,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 
 - [ ] Phase 1: Project Foundation + Diagnostics
 - [ ] Phase 2: Local Transcription To Manifest
-- [ ] Phase 3: Sentence Segmentation + Review TSV
+- [ ] Phase 3: Sentence Segmentation + Inspection TSV
 - [ ] Phase 4: IPA Enrichment + Translation Stubs
 - [ ] Phase 5: Audio Snippet Clipping
 - [ ] Phase 6: Importable Anki CSV Export
@@ -58,6 +58,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
   - segment timestamps, text, and words
   - optional `ipa`
   - optional `translation`
+  - optional `translation_provider`
   - optional `audio_file`
   - schema version
 - Default Anki fields:
@@ -88,3 +89,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 - CI must be set up in Phase 1 and run tests, lint, format check, and typecheck
   on Linux, macOS, and Windows. Full Whisper and FFmpeg smoke checks may stay
   mocked or optional per platform when they are too heavy for normal CI.
+- Use atomic temp-write plus replace for manifests, TSV, and CSV outputs. For
+  media and APKG outputs, avoid leaving partial final files where practical.
+- Every phase that produces a user-facing command must update README usage for
+  that command in the same phase.

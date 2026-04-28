@@ -19,7 +19,8 @@ turn an already-clipped manifest into a ready-to-import Anki package.
   ID, fields, and card template.
 - [ ] Add `--deck-name` CLI option while keeping a stable default deck name.
 - [ ] Add audio media embedding for each segment with an `audio_file`.
-- [ ] Generate stable note GUIDs from source audio hash plus segment ID.
+- [ ] Generate stable note GUIDs from SHA-256 text
+  `{source_audio.sha256}:{segment.id}` passed through Genanki's GUID helper.
 - [ ] Infer `apkg` format when export output path ends in `.apkg`.
 - [ ] Keep `anki-csv` behavior from Phase 6 working.
 - [ ] Add clear errors for missing snippets, empty decks, invalid output paths,
@@ -36,6 +37,7 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 - Card front shows source text and audio.
 - Card back shows IPA, translation, source file, and timestamp range.
 - Stable note identity: source audio hash plus segment ID.
+- Audio-only card fronts are out of scope for Epic 1.
 
 ## Acceptance Checks
 
@@ -53,6 +55,7 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 - [ ] `uv run ty check src tests`
 - [ ] CI quality workflow passes.
 - [ ] Manual smoke creates a non-empty `.apkg` from a fixture clipped manifest.
+- [ ] README documents APKG export and `--deck-name`.
 
 ## Notes
 

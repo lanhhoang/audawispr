@@ -18,6 +18,8 @@ manifest without any transcription API key.
 
 - [ ] Add `faster-whisper`, `onnxruntime`, and `pydantic` runtime
   dependencies.
+- [ ] Confirm dependency resolution for `faster-whisper` and `onnxruntime` in CI
+  on Linux, macOS, and Windows without downloading Whisper models.
 - [ ] Define manifest models with schema version, app version, timestamps,
   language, source audio metadata, transcription settings, segments, and words.
 - [ ] Implement manifest save/load/validation helpers with atomic JSON writes.
@@ -37,6 +39,7 @@ manifest without any transcription API key.
   in unit tests.
 - [ ] Ensure CI transcription tests use fakes or mocks and never download Whisper
   models.
+- [ ] Update README with `transcribe` and `validate` command usage.
 
 ## Defaults
 
@@ -58,6 +61,7 @@ manifest without any transcription API key.
 - [ ] `uv run audawispr transcribe --help`
 - [ ] `uv run audawispr validate --help`
 - [ ] CI quality workflow passes.
+- [ ] README documents Phase 2 commands.
 
 ## Notes
 
