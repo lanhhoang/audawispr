@@ -7,9 +7,9 @@ Split audio files into high-quality sentence-based learning materials.
 This repository is implementing Epic 1: a Python CLI and reusable core library
 for turning language-learning audio into Anki-ready study materials.
 
-Phase 2 provides local `faster-whisper` transcription into a validated JSON
-manifest. Segmentation, audio clipping, and Anki export are planned for later
-phases.
+Phase 3 provides local `faster-whisper` transcription into a validated JSON
+manifest plus timestamp-aware segmentation into sentence-like learning units.
+Audio clipping and Anki export are planned for later phases.
 
 ## Requirements
 
@@ -62,10 +62,21 @@ Validate an existing transcript manifest:
 uv run audawispr validate out/transcript.json
 ```
 
+Segment a transcript manifest and write an inspection TSV:
+
+```sh
+uv run audawispr segment out/transcript.json --output out/segments.json
+```
+
 `transcribe` defaults to French, the `small` faster-whisper model, automatic
 device selection, `int8` compute, VAD enabled, and required word timestamps.
 The first real transcription may download model files, but no transcription API
 key is required. Normal tests and CI use fakes and do not download models.
+
+`segment` preserves the transcript manifest schema and rebuilds only the segment
+list. It splits on sentence punctuation, pauses, and duration bounds. By
+default, it writes `out/segments.tsv` next to the JSON output; use
+`--inspection-tsv path/to/review.tsv` to choose a different TSV path.
 
 ## Development Checks
 
