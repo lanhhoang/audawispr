@@ -70,3 +70,69 @@ is installed and inspect local runtime readiness.
 ## Verification Evidence
 
 - Pending.
+
+## Actual Implementation
+
+### Current Readiness
+
+- The repo is ready to start Phase 1: the working tree is clean and the branch
+  is `epic-1-phase-1-project-foundation-diagnostics`.
+- The repo is currently docs-only: there is no `pyproject.toml`, `src/`,
+  `tests/`, `.github/workflows/`, package entrypoint, CLI, diagnostics core, or
+  lockfile.
+- `.gitignore` already covers common Python and tool caches, but still needs
+  audawispr-specific generated outputs, model caches, media snippets, decks, and
+  output directories.
+- `README.md` only has a title and short description, so Phase 1 usage docs
+  need to be added from scratch.
+
+### Execution Plan
+
+- Add Python packaging with `pyproject.toml`, `hatchling`, Python `>=3.11`,
+  Typer, `static-ffmpeg`, pytest, ruff, ty, the `audawispr` console script, and
+  an initial `uv.lock`.
+- Add the package skeleton under `src/audawispr/`, including `__init__.py`,
+  `__about__.py`, `__main__.py`, `cli.py`, and a small diagnostics module under
+  `src/audawispr/core/`.
+- Implement only Phase 1 CLI behavior: root help, `--version`, and `doctor`.
+  Do not expose future commands before their phases implement them.
+- Implement diagnostics for package version, Python version, FFmpeg, and
+  FFprobe. Discovery order is explicit environment variables
+  `AUDAWISPR_FFMPEG` and `AUDAWISPR_FFPROBE`, then `PATH`, then guarded
+  `static-ffmpeg` fallback.
+- Keep diagnostics cross-platform by using `Path`, `shutil.which`, and
+  `subprocess.run([...], shell=False)`. Missing FFmpeg or FFprobe should be
+  reported cleanly instead of crashing `doctor`.
+- Add pytest smoke coverage for package import/version, CLI help, version
+  output, and doctor output shape. Mock binary discovery where needed so CI does
+  not depend on local FFmpeg installs.
+- Add a GitHub Actions workflow for `push` and `pull_request` on Linux, macOS,
+  and Windows. CI must run `uv sync --dev`, `uv run pytest`,
+  `uv run ruff check .`, `uv run ruff format --check .`, and
+  `uv run ty check src tests`.
+- Expand `.gitignore` with generated manifests, snippets/media, APKG/deck
+  outputs, output directories, and Whisper/model caches.
+- Update `README.md` with Phase 1 install, CLI help, version, and diagnostics
+  usage.
+- After checks pass, update this file's verification evidence and mark Phase 1
+  complete in `tasks/epic-1.md`.
+
+### Verification Plan
+
+- `uv sync --dev`
+- `uv run pytest`
+- `uv run ruff check .`
+- `uv run ruff format --check .`
+- `uv run ty check src tests`
+- `uv run audawispr --help`
+- `uv run audawispr --version`
+- `uv run audawispr doctor`
+
+### Implementation Assumptions
+
+- Use Python 3.11 as the first supported CI version.
+- Commit `uv.lock` because audawispr is an application-style CLI project.
+- Do not add transcription, manifests, segmentation, or Anki export behavior in
+  Phase 1.
+- Do not require FFmpeg or FFprobe to be installed for tests or for `doctor` to
+  complete successfully.
