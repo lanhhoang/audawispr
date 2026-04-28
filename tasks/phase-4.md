@@ -34,6 +34,9 @@ defined without making network calls.
 - `--translate none`
 - IPA is opt-in with `--ipa`.
 - French language code is `fr`.
+- In Epic 1, untranslated segments store `translation=null` and
+  `translation_provider=null`; do not write `"none"` into the manifest provider
+  field.
 
 ## Acceptance Checks
 
@@ -51,3 +54,7 @@ defined without making network calls.
 
 - Do not implement live DeepL or OpenAI calls in this phase.
 - Do not implement audio clipping or export in this phase.
+
+## Verification Evidence
+
+- Pending.

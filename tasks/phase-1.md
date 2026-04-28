@@ -30,6 +30,11 @@ is installed and inspect local runtime readiness.
 - [ ] Add initial tests for CLI help, version output, and doctor output shape.
 - [ ] Update README with installation and Phase 1 diagnostics usage.
 
+## Defaults
+
+- Phase 1 diagnostics detect and report FFmpeg/FFprobe availability only. Do not
+  implement managed FFmpeg installation in Epic 1 unless a later plan adds it.
+
 ## Acceptance Checks
 
 - [ ] `uv run pytest`
@@ -47,3 +52,7 @@ is installed and inspect local runtime readiness.
   reported, not crash the command.
 - Do not commit generated transcription output, snippets, APKG files, model
   caches, or machine-specific paths.
+
+## Verification Evidence
+
+- Pending.

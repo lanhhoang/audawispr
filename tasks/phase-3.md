@@ -31,8 +31,10 @@ before any audio clipping or Anki export exists.
 ## Defaults
 
 - Split on sentence punctuation and pauses.
-- Merge short segments.
-- Keep configurable min/max duration thresholds.
+- `pause_split_ms=700`
+- `min_duration_ms=600`
+- `max_duration_ms=7000`
+- `merge_short=true`
 
 ## Acceptance Checks
 
@@ -54,3 +56,7 @@ before any audio clipping or Anki export exists.
   behavior in this phase.
 - The segmented manifest should remain valid input for later enrichment and
   clipping phases.
+
+## Verification Evidence
+
+- Pending.

@@ -17,7 +17,8 @@ any Anki export is implemented.
 - [ ] Implement FFmpeg/FFprobe resolution shared with `doctor`.
 - [ ] Implement clip options for padding before, padding after, format, bitrate,
   force regeneration, and FFmpeg preference.
-- [ ] Generate stable snippet filenames from segment index and segment ID.
+- [ ] Generate stable snippet filenames with pattern
+  `{index:04d}_{safe_segment_id}.{extension}`.
 - [ ] Clip source audio by segment timestamp with configured padding.
 - [ ] Reuse existing non-empty snippets unless `--force` is set.
 - [ ] Write updated manifest with relative audio paths.
@@ -35,6 +36,9 @@ any Anki export is implemented.
 - Reuse snippets unless `--force` is set.
 - `--output` is required; clipping must not modify the input manifest in place
   unless a later plan explicitly adds an in-place mode.
+- Snippet filename example: `0001_seg-0001.mp3`.
+- Use available FFmpeg/FFprobe binaries from environment variables, `PATH`, or
+  static-ffmpeg. Do not add managed FFmpeg installation in this phase.
 
 ## Acceptance Checks
 
@@ -54,3 +58,7 @@ any Anki export is implemented.
 - Do not implement Anki export in this phase.
 - Snippet paths must be suitable for later CSV and APKG export.
 - Store `audio_file` paths relative to the clipped manifest location.
+
+## Verification Evidence
+
+- Pending.

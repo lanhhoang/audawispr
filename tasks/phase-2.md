@@ -41,7 +41,7 @@ manifest without any transcription API key.
 - `language=fr`
 - `model_size=small`
 - `device=auto`
-- `compute_type=default`
+- `compute_type=int8`
 - `vad=true`
 - `word_timestamps=true`
 
@@ -61,3 +61,7 @@ manifest without any transcription API key.
 - Word timestamps are required in Epic 1. Do not add segment-level fallback
   segmentation unless a later plan explicitly changes that policy.
 - Do not implement segmentation, IPA, clipping, or export in this phase.
+
+## Verification Evidence
+
+- Pending.

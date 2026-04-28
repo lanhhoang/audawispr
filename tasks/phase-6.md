@@ -55,3 +55,7 @@ waiting for native `.apkg` support.
 - Do not implement native `.apkg` export in this phase.
 - The CSV should be usable for manual Anki import with media copied alongside
   it.
+
+## Verification Evidence
+
+- Pending.

@@ -46,7 +46,7 @@ Epic TODO item, and add the verification evidence to the completed phase file.
   - `audawispr segment MANIFEST --output out/segments.json`
   - `audawispr enrich MANIFEST --ipa --output out/enriched.json`
   - `audawispr clip MANIFEST --output out/clipped.json --output-dir out/media`
-  - `audawispr export MANIFEST --output deck.apkg`
+  - `audawispr export MANIFEST --output deck.apkg --deck-name "My French Deck"`
   - `audawispr doctor`
 - Python API:
   - `Pipeline(output=Path("deck.apkg"), language="fr").run(Path("audio.mp3"), ipa=True)`

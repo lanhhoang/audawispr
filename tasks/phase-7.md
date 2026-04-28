@@ -15,8 +15,8 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 
 - [ ] Add `genanki` dependency.
 - [ ] Extend export format support with `apkg`.
-- [ ] Define default deck name, model name, deck ID, model ID, fields, and card
-  template.
+- [ ] Define default deck name, model name, hardcoded deck ID, hardcoded model
+  ID, fields, and card template.
 - [ ] Add `--deck-name` CLI option while keeping a stable default deck name.
 - [ ] Add audio media embedding for each segment with an `audio_file`.
 - [ ] Generate stable note GUIDs from source audio hash plus segment ID.
@@ -28,6 +28,9 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 ## Defaults
 
 - Deck name: `audawispr::French`
+- Deck ID: `2059400110`
+- Model name: `audawispr Segment Card`
+- Model ID: `2059400111`
 - Fields: `SourceText`, `Audio`, `IPA`, `Translation`, `SourceFile`,
   `TimestampRange`, `SegmentId`
 - Card front shows source text and audio.
@@ -53,3 +56,7 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 
 - Do not implement the full root one-shot command in this phase.
 - Manual Anki Desktop import can remain a separate release confidence check.
+
+## Verification Evidence
+
+- Pending.

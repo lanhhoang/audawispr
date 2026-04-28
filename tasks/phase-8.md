@@ -32,7 +32,9 @@ directly from an audio file with one command.
 ## Defaults
 
 - Output path ending in `.apkg` implies native APKG export.
-- Intermediate work directory is derived from the output path.
+- Intermediate work directory is derived from the output path:
+  - `deck.apkg` uses `deck/_work/`
+  - directory output uses `<output>/_work/`
 - Translation remains `none` only in Epic 1.
 - Cancellation is cooperative and does not interrupt an active Whisper model
   call, FFmpeg subprocess, or APKG write mid-call.
@@ -56,3 +58,7 @@ directly from an audio file with one command.
 
 - This phase completes Epic 1 but should not add live translation providers.
 - Web and desktop wrappers remain later epics.
+
+## Verification Evidence
+
+- Pending.
