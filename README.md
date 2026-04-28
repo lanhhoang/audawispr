@@ -91,6 +91,18 @@ Translation is stubbed: `--translate none` is the default and performs no
 network access. Online providers such as `deepl` and `openai` are not
 implemented in Epic 1.
 
+Clip audio snippets from a segmented manifest:
+
+```sh
+uv run audawispr clip out/enriched.json --output out/clipped.json --output-dir out/media
+```
+
+`clip` reads a segmented or enriched manifest, extracts each segment's audio
+from the source file using FFmpeg, and writes the clipped manifest with
+`audio_file` paths. By default it reuses existing snippets; use `--force` to
+re-clip. Padding (`--padding-before-ms`, `--padding-after-ms`), format
+(`--format`), and bitrate (`--bitrate`) are configurable.
+
 ## Development Checks
 
 ```sh
