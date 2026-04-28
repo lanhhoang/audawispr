@@ -45,7 +45,7 @@ defined without making network calls.
 - [x] Tests for unsupported-language IPA errors.
 - [x] Tests that Epitran import or initialization failures produce a clean
   dependency/enrichment error without a traceback.
-- [ ] Cross-platform CI covers Epitran import/error-path behavior; any real IPA
+- [x] Cross-platform CI covers Epitran import/error-path behavior; any real IPA
   smoke that proves platform-sensitive may be optional outside normal CI.
 - [x] Tests that `--translate none` does not alter translation fields.
 - [x] Tests that CLI `--translate none` maps to manifest `translation=null` and
@@ -58,7 +58,7 @@ defined without making network calls.
 - [x] `uv run audawispr enrich --help`
 - [x] `uv run audawispr validate out/enriched.json` succeeds for a fixture
   enriched manifest.
-- [ ] CI quality workflow passes.
+- [x] CI quality workflow passes.
 - [x] README documents Phase 4 command and translation scope.
 
 ## Notes
@@ -78,7 +78,7 @@ defined without making network calls.
 - `uv run audawispr enrich out/segments.json --ipa --output out/enriched.json`
   passed against the real local segmented manifest.
 - `uv run audawispr validate out/enriched.json` passed.
-- Remote CI is pending.
+- Remote GitHub Actions passed on Ubuntu, macOS, and Windows.
 
 ## Actual Implementation
 
@@ -199,7 +199,7 @@ defined without making network calls.
 ### Documentation
 
 - [x] Update this section with local verification evidence after the fix.
-- [ ] Keep `tasks/epic-1.md` at `Local Done, CI Pending` until GitHub Actions
+- [x] Keep `tasks/epic-1.md` at `Local Done, CI Pending` until GitHub Actions
   passes on Windows.
 
 ### Local Verification Evidence
@@ -211,4 +211,11 @@ defined without making network calls.
 - `uv run audawispr enrich out/segments.json --ipa --output out/enriched.json`
   passed.
 - `uv run audawispr validate out/enriched.json` passed.
-- Remote Windows CI rerun is pending.
+- Remote Windows CI rerun passed.
+
+### Final Verification Evidence
+
+- Remote GitHub Actions passed on Ubuntu, macOS, and Windows.
+- `uv run audawispr enrich out/segments.json --ipa --output out/enriched.json`
+  passed against the real local segmented manifest.
+- `uv run audawispr validate out/enriched.json` passed.
