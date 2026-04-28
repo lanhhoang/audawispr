@@ -1,8 +1,10 @@
 from audawispr.core import (
+    ClipOptions,
     EnrichmentOptions,
     SegmentationOptions,
     TranscriptionOptions,
     TranscriptManifest,
+    clip_manifest_file,
     collect_source_audio_metadata,
     default_inspection_tsv_path,
     enrich_manifest,
@@ -29,3 +31,5 @@ def test_core_exports_are_importable() -> None:
     assert callable(save_manifest)
     assert callable(segment_manifest)
     assert callable(transcribe_audio)
+    assert ClipOptions().audio_format == "mp3"
+    assert callable(clip_manifest_file)

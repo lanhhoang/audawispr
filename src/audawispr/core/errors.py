@@ -23,3 +23,7 @@ class EnrichmentError(AudawisprError):
 
 class ManifestError(AudawisprError):
     """Raised when a manifest cannot be loaded, saved, or validated."""
+
+
+class ClippingError(AudawisprError):
+    """Raised when audio clipping cannot produce valid snippets."""

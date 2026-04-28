@@ -23,6 +23,7 @@ def test_help_displays_cli_name() -> None:
 
     assert result.exit_code == 0
     assert "audawispr" in output
+    assert "clip" in output
     assert "doctor" in output
     assert "enrich" in output
     assert "segment" in output
@@ -101,6 +102,24 @@ def test_enrich_help_displays_phase_4_options() -> None:
     assert "--output" in output
     assert "--ipa" in output
     assert "--translate" in output
+
+
+def test_clip_help_displays_phase_5_options() -> None:
+    result = runner.invoke(
+        app,
+        ["clip", "--help"],
+        env={"GITHUB_ACTIONS": "true"},
+    )
+    output = _normalize_terminal_output(result.stdout)
+
+    assert result.exit_code == 0
+    assert "--output" in output
+    assert "--output-dir" in output
+    assert "--padding-before-ms" in output
+    assert "--padding-after-ms" in output
+    assert "--format" in output
+    assert "--bitrate" in output
+    assert "--force" in output
 
 
 def test_validate_rejects_malformed_json(tmp_path) -> None:
@@ -321,6 +340,63 @@ def test_enrich_translate_none_keeps_translation_fields_null(tmp_path) -> None:
     loaded = output_path.read_text(encoding="utf-8")
     assert '"translation": null' in loaded
     assert '"translation_provider": null' in loaded
+
+
+def test_clip_writes_manifest(monkeypatch, tmp_path) -> None:
+    input_path = tmp_path / "manifest.json"
+    input_path.write_text("{}", encoding="utf-8")
+    output_path = tmp_path / "clipped.json"
+    output_dir = tmp_path / "media"
+
+    def fake_clip(input_manifest, output_manifest, output_dir_arg, options=None):
+        output_manifest.parent.mkdir(parents=True, exist_ok=True)
+        output_manifest.write_text('{"schema_version":"1.0"}', encoding="utf-8")
+        return None
+
+    monkeypatch.setattr("audawispr.cli.clip_manifest_file", fake_clip)
+
+    result = runner.invoke(
+        app,
+        [
+            "clip",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--output-dir",
+            str(output_dir),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Wrote clipped manifest" in result.stdout
+
+
+def test_clip_reports_clipping_error(monkeypatch, tmp_path) -> None:
+    from audawispr.core.errors import ClippingError
+
+    input_path = tmp_path / "manifest.json"
+    input_path.write_text("{}", encoding="utf-8")
+    output_path = tmp_path / "clipped.json"
+
+    def fake_clip(*args, **kwargs):
+        raise ClippingError("test error")
+
+    monkeypatch.setattr("audawispr.cli.clip_manifest_file", fake_clip)
+
+    result = runner.invoke(
+        app,
+        [
+            "clip",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--output-dir",
+            str(tmp_path / "media"),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "test error" in result.stderr
 
 
 def test_enrich_rejects_network_translation_without_writing_output(tmp_path) -> None:

@@ -6,9 +6,10 @@ from typing import Annotated
 import typer
 
 from audawispr.__about__ import __version__
+from audawispr.core.clipping import ClipOptions, clip_manifest_file
 from audawispr.core.diagnostics import collect_diagnostics
 from audawispr.core.enrichment import EnrichmentOptions, enrich_manifest_file
-from audawispr.core.errors import AudawisprError
+from audawispr.core.errors import AudawisprError, ClippingError
 from audawispr.core.manifest import load_manifest, save_manifest
 from audawispr.core.segmentation import (
     SegmentationOptions,
@@ -264,6 +265,85 @@ def enrich(
         _fail(str(exc))
 
     typer.echo(f"Wrote enriched manifest: {output}")
+
+
+@app.command()
+def clip(
+    manifest: Annotated[
+        Path,
+        typer.Argument(
+            exists=False,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Segmented or enriched manifest JSON to clip.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Clipped manifest JSON output path.",
+        ),
+    ],
+    output_dir: Annotated[
+        Path,
+        typer.Option(
+            "--output-dir",
+            help="Directory for generated audio snippets.",
+        ),
+    ],
+    padding_before_ms: Annotated[
+        int,
+        typer.Option(
+            "--padding-before-ms",
+            help="Padding before each segment in milliseconds.",
+        ),
+    ] = 150,
+    padding_after_ms: Annotated[
+        int,
+        typer.Option(
+            "--padding-after-ms",
+            help="Padding after each segment in milliseconds.",
+        ),
+    ] = 250,
+    audio_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            help="Output audio format.",
+        ),
+    ] = "mp3",
+    bitrate: Annotated[
+        str,
+        typer.Option(
+            "--bitrate",
+            help="Output audio bitrate.",
+        ),
+    ] = "128k",
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="Re-clip even if snippet already exists.",
+        ),
+    ] = False,
+) -> None:
+    """Clip audio snippets from a segmented or enriched manifest."""
+    try:
+        options = ClipOptions(
+            padding_before_ms=padding_before_ms,
+            padding_after_ms=padding_after_ms,
+            audio_format=audio_format,
+            bitrate=bitrate,
+            force=force,
+        )
+        clip_manifest_file(manifest, output, output_dir, options)
+    except ClippingError as exc:
+        _fail(str(exc))
+
+    typer.echo(f"Wrote clipped manifest: {output}")
 
 
 def _fail(message: str) -> None:
