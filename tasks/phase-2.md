@@ -76,3 +76,66 @@ manifest without any transcription API key.
 ## Verification Evidence
 
 - Pending.
+
+## Actual Implementation
+
+Phase 2 can start from the current Phase 1 baseline. The branch is clean, matches
+`master`, and the existing Phase 1 checks pass locally:
+
+- `uv sync --dev --frozen`
+- `uv run pytest`
+- `uv run ruff check .`
+- `uv run ruff format --check .`
+- `uv run ty check src tests`
+
+Use the following implementation order so the feature stays usable and testable
+while it is being built:
+
+- [ ] Add runtime dependencies: `faster-whisper`, `onnxruntime`, and
+  `pydantic>=2`.
+- [ ] Confirm `uv sync --dev` and `uv sync --dev --frozen` resolve dependencies
+  without downloading Whisper models.
+- [ ] Add Pydantic v2 manifest models for schema version, app version,
+  creation timestamp, source audio metadata, transcription settings, language,
+  segments, and words.
+- [ ] Validate manifest timing with non-negative timestamps, `start <= end`, and
+  word timestamps inside segment bounds where available.
+- [ ] Implement atomic JSON save/load helpers using a temporary file in the
+  destination directory followed by replace.
+- [ ] Implement source audio metadata collection for file name, resolved absolute
+  path string, byte size, SHA-256, language, and best-effort duration.
+- [ ] Keep duration optional: use FFprobe when available, but do not fail
+  transcription solely because duration cannot be read.
+- [ ] Fail before model initialization when input audio is missing, is a
+  directory, or cannot be read.
+- [ ] Add a transcription backend boundary so tests can inject fake Whisper
+  output and future `whisper.cpp` support can reuse the CLI contract.
+- [ ] Implement the `faster-whisper` backend with defaults:
+  `language=fr`, `model_size=small`, `device=auto`, `compute_type=int8`,
+  `vad=true`, and `word_timestamps=true`.
+- [ ] Materialize the Whisper segment generator before writing the manifest so
+  transcription errors surface before any final output file is replaced.
+- [ ] Treat missing word timestamps as a hard transcription error.
+- [ ] Add `audawispr transcribe AUDIO --output out/transcript.json --language fr`
+  with options for model size, device, compute type, and VAD.
+- [ ] Add `audawispr validate MANIFEST` for strict schema and timestamp
+  validation.
+- [ ] Map common failures to clear CLI errors with non-zero exits: missing input,
+  invalid manifest, missing dependency, model initialization failure,
+  transcription failure, and output write failure.
+- [ ] Add tests for manifest validation, atomic save/load, source metadata, fake
+  transcription output, missing word timestamps, CLI help, CLI validation
+  success/failure, and CLI transcribe using a fake backend.
+- [ ] Ensure normal CI imports and tests transcription code without downloading
+  Whisper models.
+- [ ] Update `README.md` with Phase 2 usage and note that first real model use
+  may download model files.
+- [ ] After implementation, update this phase's verification evidence and mark
+  Phase 2 complete in `tasks/epic-1.md`.
+
+Implementation assumptions:
+
+- Use Pydantic v2 models rather than dataclasses because Phase 2 requires strict
+  schema validation.
+- Keep generated `transcript.json` ignored by git, as already configured.
+- Do not add segmentation, IPA, clipping, CSV, or APKG behavior in Phase 2.
