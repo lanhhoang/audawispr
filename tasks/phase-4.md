@@ -168,36 +168,47 @@ defined without making network calls.
 
 ### Plan
 
-- [ ] Add a small private compatibility patch in
+- [x] Add a small private compatibility patch in
   `src/audawispr/core/enrichment.py` before constructing
   `epitran.Epitran("fra-Latn")`.
-- [ ] Patch `panphon.featuretable.FeatureTable._read_bases()` and
+- [x] Patch `panphon.featuretable.FeatureTable._read_bases()` and
   `_read_weights()` to open panphon package CSV resources with
   `encoding="utf-8"`.
-- [ ] Make the patch idempotent with a private marker attribute so repeated IPA
+- [x] Make the patch idempotent with a private marker attribute so repeated IPA
   enrichments do not reassign methods repeatedly.
-- [ ] Keep existing `EnrichmentError` wrapping so Epitran/Panphon
+- [x] Keep existing `EnrichmentError` wrapping so Epitran/Panphon
   initialization problems still produce clean CLI errors.
-- [ ] Do not skip Windows IPA tests.
-- [ ] Do not use `PYTHONUTF8=1` as the primary fix, because that would hide the
+- [x] Do not skip Windows IPA tests.
+- [x] Do not use `PYTHONUTF8=1` as the primary fix, because that would hide the
   app bug for Windows users.
 
 ### Tests And Verification
 
-- [ ] Add a focused unit test for the Panphon UTF-8 compatibility patch using
+- [x] Add a focused unit test for the Panphon UTF-8 compatibility patch using
   fake resource objects that fail if `.open()` is called without
   `encoding="utf-8"`.
-- [ ] Keep existing real Epitran tests for manifest and CLI IPA behavior.
-- [ ] Run `uv run pytest`.
-- [ ] Run `uv run ruff check .`.
-- [ ] Run `uv run ruff format --check .`.
-- [ ] Run `uv run ty check src tests`.
-- [ ] Run
+- [x] Keep existing real Epitran tests for manifest and CLI IPA behavior.
+- [x] Run `uv run pytest`.
+- [x] Run `uv run ruff check .`.
+- [x] Run `uv run ruff format --check .`.
+- [x] Run `uv run ty check src tests`.
+- [x] Run
   `uv run audawispr enrich out/segments.json --ipa --output out/enriched.json`.
-- [ ] Run `uv run audawispr validate out/enriched.json`.
+- [x] Run `uv run audawispr validate out/enriched.json`.
 
 ### Documentation
 
-- [ ] Update this section with local verification evidence after the fix.
+- [x] Update this section with local verification evidence after the fix.
 - [ ] Keep `tasks/epic-1.md` at `Local Done, CI Pending` until GitHub Actions
   passes on Windows.
+
+### Local Verification Evidence
+
+- `uv run pytest` passed with 51 tests.
+- `uv run ruff check .` passed.
+- `uv run ruff format --check .` passed.
+- `uv run ty check src tests` passed.
+- `uv run audawispr enrich out/segments.json --ipa --output out/enriched.json`
+  passed.
+- `uv run audawispr validate out/enriched.json` passed.
+- Remote Windows CI rerun is pending.
