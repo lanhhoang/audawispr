@@ -149,3 +149,48 @@ Implementation assumptions:
   schema validation.
 - Keep generated `transcript.json` ignored by git, as already configured.
 - Do not add segmentation, IPA, clipping, CSV, or APKG behavior in Phase 2.
+
+## Fix CI Help-Output Test Failure
+
+Remote GitHub Actions failed on Ubuntu, macOS, and Windows because the
+`test_transcribe_help_displays_phase_2_options` assertion checks raw Rich/Typer
+help output. Under `GITHUB_ACTIONS=true`, Rich injects ANSI style resets between
+the two hyphens in option names, so captured output contains fragments like
+`-\x1b[0m\x1b[1m-output` instead of contiguous `--output`.
+
+The CLI behavior is correct; this is a brittle test-rendering issue. The real
+transcription artifact in `out/transcript.json` was manually inspected and
+contains valid source metadata, transcription settings, one segment, and word
+timestamps.
+
+Implementation plan:
+
+- [ ] Update `tests/test_cli.py` to normalize Rich/Typer help output before
+  asserting on option names.
+- [ ] Add a small ANSI-stripping helper using a standard escape-code regex.
+- [ ] Apply the helper to help-output assertions for `transcribe`, and
+  preferably all CLI help tests for consistency.
+- [ ] Make the `transcribe --help` test explicitly reproduce GitHub Actions
+  rendering with `env={"GITHUB_ACTIONS": "true"}` so the issue cannot regress
+  locally.
+- [ ] Keep command behavior unchanged; do not modify `src/audawispr/cli.py`.
+- [ ] Do not commit `out/transcript.json`; it remains an ignored generated
+  artifact.
+
+Verification plan:
+
+- [ ] `uv run pytest tests/test_cli.py::test_transcribe_help_displays_phase_2_options`
+- [ ] `uv run pytest`
+- [ ] `uv run ruff check .`
+- [ ] `uv run ruff format --check .`
+- [ ] `uv run ty check src tests`
+- [ ] `uv run audawispr transcribe --help`
+- [ ] `uv run audawispr validate --help`
+- [ ] Push and verify GitHub Actions passes on Ubuntu, macOS, and Windows.
+
+Documentation decision:
+
+- No README change is needed because this is a test-rendering issue, not a
+  behavior or usage change.
+- After fixing, update this section with verification evidence and keep the
+  Phase 2 CI checkbox pending until remote CI passes.
