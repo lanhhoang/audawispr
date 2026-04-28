@@ -24,6 +24,7 @@ def test_help_displays_cli_name() -> None:
     assert result.exit_code == 0
     assert "audawispr" in output
     assert "doctor" in output
+    assert "enrich" in output
     assert "segment" in output
     assert "transcribe" in output
     assert "validate" in output
@@ -86,6 +87,20 @@ def test_segment_help_displays_phase_3_options() -> None:
     assert "--min-duration-ms" in output
     assert "--max-duration-ms" in output
     assert "--merge-short" in output
+
+
+def test_enrich_help_displays_phase_4_options() -> None:
+    result = runner.invoke(
+        app,
+        ["enrich", "--help"],
+        env={"GITHUB_ACTIONS": "true"},
+    )
+    output = _normalize_terminal_output(result.stdout)
+
+    assert result.exit_code == 0
+    assert "--output" in output
+    assert "--ipa" in output
+    assert "--translate" in output
 
 
 def test_validate_rejects_malformed_json(tmp_path) -> None:
@@ -268,6 +283,66 @@ def test_segment_reports_output_write_failure(tmp_path) -> None:
 
     assert result.exit_code == 1
     assert "could not save manifest" in result.stderr
+
+
+def test_enrich_writes_manifest_with_ipa(tmp_path) -> None:
+    input_path = tmp_path / "segments.json"
+    output_path = tmp_path / "enriched.json"
+    input_path.write_text(_make_manifest().model_dump_json(), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["enrich", str(input_path), "--output", str(output_path), "--ipa"],
+    )
+
+    assert result.exit_code == 0
+    assert "Wrote enriched manifest" in result.stdout
+    assert output_path.exists()
+
+
+def test_enrich_translate_none_keeps_translation_fields_null(tmp_path) -> None:
+    input_path = tmp_path / "segments.json"
+    output_path = tmp_path / "enriched.json"
+    input_path.write_text(_make_manifest().model_dump_json(), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "enrich",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--translate",
+            "none",
+        ],
+    )
+
+    assert result.exit_code == 0
+    loaded = output_path.read_text(encoding="utf-8")
+    assert '"translation": null' in loaded
+    assert '"translation_provider": null' in loaded
+
+
+def test_enrich_rejects_network_translation_without_writing_output(tmp_path) -> None:
+    input_path = tmp_path / "segments.json"
+    output_path = tmp_path / "enriched.json"
+    input_path.write_text(_make_manifest().model_dump_json(), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "enrich",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--translate",
+            "deepl",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "not supported in Epic 1" in result.stderr
+    assert not output_path.exists()
 
 
 def _make_manifest(
