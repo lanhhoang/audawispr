@@ -35,6 +35,8 @@ directly from an audio file with one command.
 - Intermediate work directory is derived from the output path:
   - `deck.apkg` uses `deck/_work/`
   - directory output uses `<output>/_work/`
+- Implement work directory paths with `Path` joins. The `/` examples above are
+  documentation shorthand, not string concatenation requirements.
 - Translation remains `none` only in Epic 1.
 - Cancellation is cooperative and does not interrupt an active Whisper model
   call, FFmpeg subprocess, or APKG write mid-call.
@@ -44,6 +46,8 @@ directly from an audio file with one command.
 - [ ] One-shot CLI tests with mocked transcription.
 - [ ] Python facade tests.
 - [ ] Tests for intermediate output paths.
+- [ ] Tests that one-shot work directory derivation is correct with Windows-style
+  and POSIX-style paths.
 - [ ] Tests for phase-specific error messages.
 - [ ] Tests for cooperative cancellation before or between phases.
 - [ ] Regression tests for all phase subcommands.

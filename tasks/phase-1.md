@@ -25,8 +25,12 @@ is installed and inspect local runtime readiness.
 - [ ] Add a Typer app with `--version`, `doctor`, and placeholder subcommand
   registration points for later phases.
 - [ ] Add a small diagnostics core that checks Python version, package version,
-  and FFmpeg/FFprobe availability from environment variables, `PATH`, or
-  static-ffmpeg.
+  and FFmpeg/FFprobe availability from `AUDAWISPR_FFMPEG`,
+  `AUDAWISPR_FFPROBE`, `PATH`, or static-ffmpeg.
+- [ ] Ensure diagnostics work with Windows `.exe` tool paths as well as macOS
+  and Linux binaries.
+- [ ] Add initial CI workflow targeting Linux, macOS, and Windows for lint and
+  unit tests.
 - [ ] Add initial tests for CLI help, version output, and doctor output shape.
 - [ ] Update README with installation and Phase 1 diagnostics usage.
 
@@ -34,6 +38,8 @@ is installed and inspect local runtime readiness.
 
 - Phase 1 diagnostics detect and report FFmpeg/FFprobe availability only. Do not
   implement managed FFmpeg installation in Epic 1 unless a later plan adds it.
+- If static-ffmpeg cannot provide binaries for the current OS, `doctor` should
+  report that cleanly and continue checking other sources.
 
 ## Acceptance Checks
 
@@ -44,6 +50,7 @@ is installed and inspect local runtime readiness.
 - [ ] `uv run audawispr --help`
 - [ ] `uv run audawispr --version`
 - [ ] `uv run audawispr doctor`
+- [ ] CI lint/unit-test workflow exists for Linux, macOS, and Windows.
 
 ## Notes
 

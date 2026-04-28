@@ -18,6 +18,8 @@ waiting for native `.apkg` support.
 - [ ] Implement media resolution and deterministic media copying for segment
   snippets.
 - [ ] Implement `anki-csv` writer at `cards.csv` with stable field order.
+- [ ] Write CSV with UTF-8 encoding and Python `csv` newline handling to avoid
+  platform-specific line ending bugs.
 - [ ] Include source text, audio reference, IPA, translation, source filename,
   timestamp range, and segment ID fields.
 - [ ] Write audio references in Anki sound syntax, such as
@@ -36,12 +38,14 @@ waiting for native `.apkg` support.
   `SourceText`, `Audio`, `IPA`, `Translation`, `SourceFile`,
   `TimestampRange`, `SegmentId`.
 - Copied media goes under `<output>/media/`.
+- Audio references in CSV use media basenames only, not OS-specific paths.
 
 ## Acceptance Checks
 
 - [ ] Tests for field order and row values.
 - [ ] Tests for media copying and audio references.
 - [ ] Tests for `[sound:...]` syntax.
+- [ ] Tests for UTF-8 text and newline-safe CSV output.
 - [ ] Tests for missing snippet errors.
 - [ ] Tests for deterministic reruns.
 - [ ] `uv run pytest`

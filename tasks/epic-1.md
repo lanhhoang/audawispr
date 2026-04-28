@@ -71,6 +71,9 @@ Epic TODO item, and add the verification evidence to the completed phase file.
 ## Assumptions
 
 - Epic 1 is CLI + core only; web is Epic 2 and desktop is Epic 3.
+- Epic 1 must run cross-platform on macOS, Linux, and Windows. Use
+  cross-platform Python APIs for filesystem paths, process execution, and
+  output writes.
 - Python 3.11+ is acceptable.
 - `faster-whisper` is the first transcription backend; the core will keep a
   backend boundary for future `whisper.cpp`.
@@ -81,3 +84,6 @@ Epic TODO item, and add the verification evidence to the completed phase file.
   later epic explicitly adds them.
 - Transcription manifests must include word timestamps, because Phase 3
   segmentation depends on them.
+- CI should eventually run lint and unit tests on Linux, macOS, and Windows.
+  Full Whisper and FFmpeg smoke checks may stay mocked or optional per platform
+  when they are too heavy for normal CI.

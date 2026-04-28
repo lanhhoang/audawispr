@@ -42,6 +42,8 @@ defined without making network calls.
 
 - [ ] Tests for French IPA enrichment.
 - [ ] Tests for unsupported-language IPA errors.
+- [ ] Tests that Epitran import or initialization failures produce a clean
+  dependency/enrichment error without a traceback.
 - [ ] Tests that `--translate none` does not alter translation fields.
 - [ ] Tests that `deepl` and `openai` fail without network access.
 - [ ] `uv run pytest`

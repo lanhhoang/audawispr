@@ -20,8 +20,10 @@ any Anki export is implemented.
 - [ ] Generate stable snippet filenames with pattern
   `{index:04d}_{safe_segment_id}.{extension}`.
 - [ ] Clip source audio by segment timestamp with configured padding.
+- [ ] Invoke FFmpeg with `subprocess.run([...], shell=False)` to keep quoting
+  and execution safe across macOS, Linux, and Windows.
 - [ ] Reuse existing non-empty snippets unless `--force` is set.
-- [ ] Write updated manifest with relative audio paths.
+- [ ] Write updated manifest with relative POSIX-style audio paths.
 - [ ] Add `audawispr clip` CLI with input manifest, output directory, manifest
   output path, padding, format, bitrate, and force options.
 - [ ] Add clear errors for missing source audio, missing FFmpeg, invalid ranges,
@@ -39,12 +41,16 @@ any Anki export is implemented.
 - Snippet filename example: `0001_seg-0001.mp3`.
 - Use available FFmpeg/FFprobe binaries from environment variables, `PATH`, or
   static-ffmpeg. Do not add managed FFmpeg installation in this phase.
+- Use `Path` internally, but serialize manifest `audio_file` values with `/`
+  separators on every OS.
 
 ## Acceptance Checks
 
 - [ ] Synthetic audio clipping test when FFmpeg is available.
 - [ ] Tests for stable snippet filenames.
 - [ ] Tests for padding bounded by audio duration.
+- [ ] Tests for POSIX-style serialized `audio_file` values on Windows-style
+  paths.
 - [ ] Tests for reuse and force regeneration.
 - [ ] Tests for missing FFmpeg error behavior.
 - [ ] `uv run pytest`
@@ -57,7 +63,8 @@ any Anki export is implemented.
 
 - Do not implement Anki export in this phase.
 - Snippet paths must be suitable for later CSV and APKG export.
-- Store `audio_file` paths relative to the clipped manifest location.
+- Store `audio_file` paths relative to the clipped manifest location using `/`
+  separators, even on Windows.
 
 ## Verification Evidence
 

@@ -44,6 +44,8 @@ manifest without any transcription API key.
 - `compute_type=int8`
 - `vad=true`
 - `word_timestamps=true`
+- `compute_type` is a default, not a restriction; the CLI must allow override
+  for GPU or platform-specific faster-whisper setups.
 
 ## Acceptance Checks
 
@@ -58,6 +60,8 @@ manifest without any transcription API key.
 
 - First-time model download may require network, but no transcription API key is
   required.
+- Store source audio paths as strings from `Path.resolve()` for local reruns.
+  Do not treat those absolute paths as portable across machines.
 - Word timestamps are required in Epic 1. Do not add segment-level fallback
   segmentation unless a later plan explicitly changes that policy.
 - Do not implement segmentation, IPA, clipping, or export in this phase.
