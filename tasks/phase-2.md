@@ -165,27 +165,27 @@ timestamps.
 
 Implementation plan:
 
-- [ ] Update `tests/test_cli.py` to normalize Rich/Typer help output before
+- [x] Update `tests/test_cli.py` to normalize Rich/Typer help output before
   asserting on option names.
-- [ ] Add a small ANSI-stripping helper using a standard escape-code regex.
-- [ ] Apply the helper to help-output assertions for `transcribe`, and
+- [x] Add a small ANSI-stripping helper using a standard escape-code regex.
+- [x] Apply the helper to help-output assertions for `transcribe`, and
   preferably all CLI help tests for consistency.
-- [ ] Make the `transcribe --help` test explicitly reproduce GitHub Actions
+- [x] Make the `transcribe --help` test explicitly reproduce GitHub Actions
   rendering with `env={"GITHUB_ACTIONS": "true"}` so the issue cannot regress
   locally.
-- [ ] Keep command behavior unchanged; do not modify `src/audawispr/cli.py`.
-- [ ] Do not commit `out/transcript.json`; it remains an ignored generated
+- [x] Keep command behavior unchanged; do not modify `src/audawispr/cli.py`.
+- [x] Do not commit `out/transcript.json`; it remains an ignored generated
   artifact.
 
 Verification plan:
 
-- [ ] `uv run pytest tests/test_cli.py::test_transcribe_help_displays_phase_2_options`
-- [ ] `uv run pytest`
-- [ ] `uv run ruff check .`
-- [ ] `uv run ruff format --check .`
-- [ ] `uv run ty check src tests`
-- [ ] `uv run audawispr transcribe --help`
-- [ ] `uv run audawispr validate --help`
+- [x] `uv run pytest tests/test_cli.py::test_transcribe_help_displays_phase_2_options`
+- [x] `uv run pytest`
+- [x] `uv run ruff check .`
+- [x] `uv run ruff format --check .`
+- [x] `uv run ty check src tests`
+- [x] `uv run audawispr transcribe --help`
+- [x] `uv run audawispr validate --help`
 - [ ] Push and verify GitHub Actions passes on Ubuntu, macOS, and Windows.
 
 Documentation decision:
@@ -194,3 +194,14 @@ Documentation decision:
   behavior or usage change.
 - After fixing, update this section with verification evidence and keep the
   Phase 2 CI checkbox pending until remote CI passes.
+
+Verification evidence:
+
+- `uv run pytest tests/test_cli.py::test_transcribe_help_displays_phase_2_options`
+  passed with `env={"GITHUB_ACTIONS": "true"}` in the test.
+- `uv run pytest` passed: 21 tests.
+- `uv run ruff check .` passed.
+- `uv run ruff format --check .` passed: 16 files already formatted.
+- `uv run ty check src tests` passed.
+- `uv run audawispr transcribe --help` passed.
+- `uv run audawispr validate --help` passed.
