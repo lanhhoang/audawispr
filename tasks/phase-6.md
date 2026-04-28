@@ -45,19 +45,19 @@ waiting for native `.apkg` support.
 
 ## Acceptance Checks
 
-- [ ] Tests for field order and row values.
-- [ ] Tests for media copying and audio references.
-- [ ] Tests for `[sound:...]` syntax.
-- [ ] Tests for UTF-8 text and newline-safe CSV output.
-- [ ] Tests for missing snippet errors.
-- [ ] Tests for deterministic reruns.
-- [ ] README documents CSV import and media handling.
-- [ ] `uv run pytest`
-- [ ] `uv run ruff check .`
-- [ ] `uv run ruff format --check .`
-- [ ] `uv run ty check src tests`
-- [ ] `uv run audawispr export --help`
-- [ ] CI quality workflow passes.
+- [x] Tests for field order and row values.
+- [x] Tests for media copying and audio references.
+- [x] Tests for `[sound:...]` syntax.
+- [x] Tests for UTF-8 text and newline-safe CSV output.
+- [x] Tests for missing snippet errors.
+- [x] Tests for deterministic reruns.
+- [x] README documents CSV import and media handling.
+- [x] `uv run pytest`
+- [x] `uv run ruff check .`
+- [x] `uv run ruff format --check .`
+- [x] `uv run ty check src tests`
+- [x] `uv run audawispr export --help`
+- [x] CI quality workflow passes.
 
 ## Notes
 
@@ -67,7 +67,13 @@ waiting for native `.apkg` support.
 
 ## Verification Evidence
 
-- Pending.
+- `uv run pytest` — 86 passed.
+- `uv run ruff check .` — passed.
+- `uv run ruff format --check .` — passed.
+- `uv run ty check src tests` — passed.
+- `uv run audawispr export --help` — all options shown.
+- Remote GitHub Actions CI quality workflow — passed on Linux, macOS, and Windows.
+- Command `audawispr export out/clipped.json --format anki-csv --output out/anki-csv` produces `out/anki-csv/cards.csv` with correct field order and `[sound:...]` audio references, and `out/anki-csv/media/` with copied snippet files.
 
 ---
 
