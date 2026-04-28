@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "audawispr"
+version = "0.1.0"
+description = "Turn language-learning audio into Anki-ready study materials."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "static-ffmpeg>=2.7",
+    "typer>=0.12",
+]
+
+[project.scripts]
+audawispr = "audawispr.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/audawispr"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "ty>=0.0.1a20",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
