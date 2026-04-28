@@ -27,3 +27,7 @@ class ManifestError(AudawisprError):
 
 class ClippingError(AudawisprError):
     """Raised when audio clipping cannot produce valid snippets."""
+
+
+class ExportError(AudawisprError):
+    """Raised when manifest export cannot produce valid output."""
