@@ -7,9 +7,10 @@ Split audio files into high-quality sentence-based learning materials.
 This repository is implementing Epic 1: a Python CLI and reusable core library
 for turning language-learning audio into Anki-ready study materials.
 
-Phase 3 provides local `faster-whisper` transcription into a validated JSON
-manifest plus timestamp-aware segmentation into sentence-like learning units.
-Audio clipping and Anki export are planned for later phases.
+Phase 4 provides local `faster-whisper` transcription into a validated JSON
+manifest, timestamp-aware segmentation into sentence-like learning units, and
+French IPA enrichment. Audio clipping and Anki export are planned for later
+phases.
 
 ## Requirements
 
@@ -68,6 +69,12 @@ Segment a transcript manifest and write an inspection TSV:
 uv run audawispr segment out/transcript.json --output out/segments.json
 ```
 
+Enrich a segmented French manifest with IPA:
+
+```sh
+uv run audawispr enrich out/segments.json --ipa --output out/enriched.json
+```
+
 `transcribe` defaults to French, the `small` faster-whisper model, automatic
 device selection, `int8` compute, VAD enabled, and required word timestamps.
 The first real transcription may download model files, but no transcription API
@@ -77,6 +84,12 @@ key is required. Normal tests and CI use fakes and do not download models.
 list. It splits on sentence punctuation, pauses, and duration bounds. By
 default, it writes `out/segments.tsv` next to the JSON output; use
 `--inspection-tsv path/to/review.tsv` to choose a different TSV path.
+
+`enrich` preserves timestamps, words, and source metadata while adding optional
+study fields. IPA is opt-in with `--ipa` and is French-only in Epic 1.
+Translation is stubbed: `--translate none` is the default and performs no
+network access. Online providers such as `deepl` and `openai` are not
+implemented in Epic 1.
 
 ## Development Checks
 
