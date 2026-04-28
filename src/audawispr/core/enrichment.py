@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from audawispr.core.errors import EnrichmentError
 from audawispr.core.manifest import (
@@ -115,6 +115,9 @@ class FrenchIpaService:
             raise EnrichmentError(msg) from exc
 
         try:
+            _ensure_panphon_featuretable_uses_utf8(
+                import_module("panphon.featuretable")
+            )
             self._epitran = epitran_module.Epitran(epitran_code)
         except Exception as exc:
             msg = f"could not initialize Epitran for {epitran_code}: {exc}"
@@ -144,3 +147,50 @@ class FrenchIpaService:
 def _is_french_language(language: str) -> bool:
     normalized_language = language.strip().lower().replace("_", "-")
     return normalized_language == "fr" or normalized_language.startswith("fr-")
+
+
+def _ensure_panphon_featuretable_uses_utf8(featuretable_module: Any) -> None:
+    feature_table_cls = featuretable_module.FeatureTable
+    if getattr(feature_table_cls, "_audawispr_utf8_patch", False):
+        return
+
+    files_func = featuretable_module.files
+    pd_module = featuretable_module.pd
+    segment_cls = featuretable_module.Segment
+
+    def _read_bases(
+        self: Any,
+        fn: str,
+        weights: list[float],
+    ) -> tuple[list[tuple[str, Any]], dict[str, Any], list[str]]:
+        spec_to_int = {"+": 1, "0": 0, "-": -1}
+
+        with files_func("panphon").joinpath(fn).open(encoding="utf-8") as data_file:
+            df = pd_module.read_csv(data_file)
+
+        df["ipa"] = df["ipa"].apply(self.normalize)
+
+        feature_names = list(df.columns[1:])
+        df[feature_names] = df[feature_names].map(lambda value: spec_to_int[value])
+        segments = [
+            (
+                row["ipa"],
+                segment_cls(feature_names, row[1:].to_dict(), weights=weights),
+            )
+            for _, row in df.iterrows()
+        ]
+
+        return segments, dict(segments), feature_names
+
+    def _read_weights(self: Any, weights_fn: str) -> list[float]:
+        with (
+            files_func("panphon")
+            .joinpath(weights_fn)
+            .open(encoding="utf-8") as data_file
+        ):
+            df = pd_module.read_csv(data_file)
+        return df.iloc[0].astype(float).tolist()
+
+    feature_table_cls._read_bases = _read_bases
+    feature_table_cls._read_weights = _read_weights
+    feature_table_cls._audawispr_utf8_patch = True

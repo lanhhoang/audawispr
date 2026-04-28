@@ -1,11 +1,15 @@
+from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
+import pandas as pd
 import pytest
 
 from audawispr.core.enrichment import (
     EnrichmentOptions,
     FrenchIpaService,
+    _ensure_panphon_featuretable_uses_utf8,
     enrich_manifest,
     enrich_manifest_file,
     get_translation_provider,
@@ -90,6 +94,69 @@ def test_epitran_initialization_failure_is_clean(
 
     with pytest.raises(EnrichmentError, match="could not initialize Epitran"):
         FrenchIpaService()
+
+
+def test_panphon_featuretable_patch_opens_package_data_as_utf8() -> None:
+    class FakeSegment:
+        def __init__(
+            self,
+            feature_names: list[str],
+            features: dict[str, int],
+            weights: list[float],
+        ) -> None:
+            self.feature_names = feature_names
+            self.features = features
+            self.weights = weights
+
+    class FakeFeatureTable:
+        @staticmethod
+        def normalize(data: str) -> str:
+            return data
+
+    class FakeDataFile:
+        def __init__(self, content: str) -> None:
+            self.content = content
+            self.opened_with_utf8 = False
+
+        def open(self, **kwargs):
+            if kwargs.get("encoding") != "utf-8":
+                raise UnicodeDecodeError("charmap", b"\x90", 0, 1, "bad codec")
+            self.opened_with_utf8 = True
+            return StringIO(self.content)
+
+    weights_file = FakeDataFile("son,cons\n1,2\n")
+    bases_file = FakeDataFile("ipa,son,cons\nɑ,+,-\n")
+
+    def fake_files(_package: str):
+        return SimpleNamespace(
+            joinpath=lambda name: {
+                "weights.csv": weights_file,
+                "bases.csv": bases_file,
+            }[name]
+        )
+
+    featuretable_module = SimpleNamespace(
+        FeatureTable=FakeFeatureTable,
+        Segment=FakeSegment,
+        files=fake_files,
+        pd=pd,
+    )
+
+    _ensure_panphon_featuretable_uses_utf8(featuretable_module)
+    feature_table: Any = FakeFeatureTable()
+
+    weights = feature_table._read_weights("weights.csv")
+    segments, segment_map, feature_names = feature_table._read_bases(
+        "bases.csv",
+        weights,
+    )
+
+    assert weights == [1.0, 2.0]
+    assert feature_names == ["son", "cons"]
+    assert segments[0][0] == "ɑ"
+    assert segment_map["ɑ"].features == {"son": 1, "cons": -1}
+    assert weights_file.opened_with_utf8
+    assert bases_file.opened_with_utf8
 
 
 def test_enrich_manifest_file_saves_valid_manifest(tmp_path: Path) -> None:
