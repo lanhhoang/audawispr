@@ -53,6 +53,7 @@ waiting for native `.apkg` support.
 - [ ] `uv run ruff format --check .`
 - [ ] `uv run ty check src tests`
 - [ ] `uv run audawispr export --help`
+- [ ] CI quality workflow passes.
 
 ## Notes
 

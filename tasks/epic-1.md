@@ -14,6 +14,7 @@ only. Do not copy them wholesale into this repo.
 
 After completing each phase, update this dashboard status, check the matching
 Epic TODO item, and add the verification evidence to the completed phase file.
+The CI quality workflow must stay green for every phase after Phase 1.
 
 | # | Phase | Status |
 |---|-------|--------|
@@ -84,6 +85,6 @@ Epic TODO item, and add the verification evidence to the completed phase file.
   later epic explicitly adds them.
 - Transcription manifests must include word timestamps, because Phase 3
   segmentation depends on them.
-- CI should eventually run lint and unit tests on Linux, macOS, and Windows.
-  Full Whisper and FFmpeg smoke checks may stay mocked or optional per platform
-  when they are too heavy for normal CI.
+- CI must be set up in Phase 1 and run tests, lint, format check, and typecheck
+  on Linux, macOS, and Windows. Full Whisper and FFmpeg smoke checks may stay
+  mocked or optional per platform when they are too heavy for normal CI.

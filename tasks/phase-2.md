@@ -35,6 +35,8 @@ manifest without any transcription API key.
   initialization failure, and invalid generated manifest.
 - [ ] Add tests with fake Whisper output to avoid requiring real model downloads
   in unit tests.
+- [ ] Ensure CI transcription tests use fakes or mocks and never download Whisper
+  models.
 
 ## Defaults
 
@@ -55,6 +57,7 @@ manifest without any transcription API key.
 - [ ] `uv run ty check src tests`
 - [ ] `uv run audawispr transcribe --help`
 - [ ] `uv run audawispr validate --help`
+- [ ] CI quality workflow passes.
 
 ## Notes
 

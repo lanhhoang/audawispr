@@ -41,6 +41,7 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 
 - [ ] Tests for `.apkg` file generation.
 - [ ] Tests for media inclusion.
+- [ ] CI-friendly APKG generation test using fixture manifests and fixture media.
 - [ ] Tests for `--deck-name`.
 - [ ] Tests for card template field mapping.
 - [ ] Tests for stable note GUIDs.
@@ -50,12 +51,14 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 - [ ] `uv run ruff check .`
 - [ ] `uv run ruff format --check .`
 - [ ] `uv run ty check src tests`
+- [ ] CI quality workflow passes.
 - [ ] Manual smoke creates a non-empty `.apkg` from a fixture clipped manifest.
 
 ## Notes
 
 - Do not implement the full root one-shot command in this phase.
-- Manual Anki Desktop import can remain a separate release confidence check.
+- Manual Anki Desktop import remains separate from CI and can be tracked as a
+  release confidence check.
 
 ## Verification Evidence
 

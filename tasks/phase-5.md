@@ -47,6 +47,8 @@ any Anki export is implemented.
 ## Acceptance Checks
 
 - [ ] Synthetic audio clipping test when FFmpeg is available.
+- [ ] CI always runs no-FFmpeg and FFmpeg error-path tests; real clipping tests
+  may be skipped when FFmpeg is unavailable.
 - [ ] Tests for stable snippet filenames.
 - [ ] Tests for padding bounded by audio duration.
 - [ ] Tests for POSIX-style serialized `audio_file` values on Windows-style
@@ -58,6 +60,7 @@ any Anki export is implemented.
 - [ ] `uv run ruff format --check .`
 - [ ] `uv run ty check src tests`
 - [ ] `uv run audawispr clip --help`
+- [ ] CI quality workflow passes.
 
 ## Notes
 

@@ -48,6 +48,7 @@ before any audio clipping or Anki export exists.
 - [ ] `uv run ruff format --check .`
 - [ ] `uv run ty check src tests`
 - [ ] `uv run audawispr segment --help`
+- [ ] CI quality workflow passes.
 
 ## Notes
 

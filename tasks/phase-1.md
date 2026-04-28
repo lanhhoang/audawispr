@@ -29,8 +29,8 @@ is installed and inspect local runtime readiness.
   `AUDAWISPR_FFPROBE`, `PATH`, or static-ffmpeg.
 - [ ] Ensure diagnostics work with Windows `.exe` tool paths as well as macOS
   and Linux binaries.
-- [ ] Add initial CI workflow targeting Linux, macOS, and Windows for lint and
-  unit tests.
+- [ ] Add initial CI quality workflow targeting Linux, macOS, and Windows for
+  tests, lint, format check, and typecheck.
 - [ ] Add initial tests for CLI help, version output, and doctor output shape.
 - [ ] Update README with installation and Phase 1 diagnostics usage.
 
@@ -50,7 +50,9 @@ is installed and inspect local runtime readiness.
 - [ ] `uv run audawispr --help`
 - [ ] `uv run audawispr --version`
 - [ ] `uv run audawispr doctor`
-- [ ] CI lint/unit-test workflow exists for Linux, macOS, and Windows.
+- [ ] CI quality workflow exists for Linux, macOS, and Windows and runs
+  `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, and
+  `uv run ty check src tests`.
 
 ## Notes
 

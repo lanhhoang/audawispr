@@ -44,6 +44,8 @@ defined without making network calls.
 - [ ] Tests for unsupported-language IPA errors.
 - [ ] Tests that Epitran import or initialization failures produce a clean
   dependency/enrichment error without a traceback.
+- [ ] Cross-platform CI covers Epitran import/error-path behavior; any real IPA
+  smoke that proves platform-sensitive may be optional outside normal CI.
 - [ ] Tests that `--translate none` does not alter translation fields.
 - [ ] Tests that `deepl` and `openai` fail without network access.
 - [ ] `uv run pytest`
@@ -51,6 +53,7 @@ defined without making network calls.
 - [ ] `uv run ruff format --check .`
 - [ ] `uv run ty check src tests`
 - [ ] `uv run audawispr enrich --help`
+- [ ] CI quality workflow passes.
 
 ## Notes
 

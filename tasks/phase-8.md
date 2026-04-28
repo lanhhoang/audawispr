@@ -57,6 +57,7 @@ directly from an audio file with one command.
 - [ ] `uv run ty check src tests`
 - [ ] `uv run audawispr --help`
 - [ ] `uv run audawispr doctor`
+- [ ] CI quality workflow passes.
 
 ## Notes
 
