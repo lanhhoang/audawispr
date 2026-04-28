@@ -1,3 +1,5 @@
+import re
+
 from typer.testing import CliRunner
 
 from audawispr.__about__ import __version__
@@ -12,16 +14,18 @@ from audawispr.core.manifest import (
 from audawispr.core.transcription import TranscriptionOptions
 
 runner = CliRunner()
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
 def test_help_displays_cli_name() -> None:
     result = runner.invoke(app, ["--help"])
+    output = _normalize_terminal_output(result.stdout)
 
     assert result.exit_code == 0
-    assert "audawispr" in result.stdout
-    assert "doctor" in result.stdout
-    assert "transcribe" in result.stdout
-    assert "validate" in result.stdout
+    assert "audawispr" in output
+    assert "doctor" in output
+    assert "transcribe" in output
+    assert "validate" in output
 
 
 def test_version_displays_package_version() -> None:
@@ -43,21 +47,27 @@ def test_doctor_displays_output_shape() -> None:
 
 
 def test_transcribe_help_displays_phase_2_options() -> None:
-    result = runner.invoke(app, ["transcribe", "--help"])
+    result = runner.invoke(
+        app,
+        ["transcribe", "--help"],
+        env={"GITHUB_ACTIONS": "true"},
+    )
+    output = _normalize_terminal_output(result.stdout)
 
     assert result.exit_code == 0
-    assert "--output" in result.stdout
-    assert "--language" in result.stdout
-    assert "--model-size" in result.stdout
-    assert "--compute-type" in result.stdout
-    assert "--vad" in result.stdout
+    assert "--output" in output
+    assert "--language" in output
+    assert "--model-size" in output
+    assert "--compute-type" in output
+    assert "--vad" in output
 
 
 def test_validate_help_displays_manifest_argument() -> None:
     result = runner.invoke(app, ["validate", "--help"])
+    output = _normalize_terminal_output(result.stdout)
 
     assert result.exit_code == 0
-    assert "MANIFEST" in result.stdout
+    assert "MANIFEST" in output
 
 
 def test_validate_rejects_malformed_json(tmp_path) -> None:
@@ -177,3 +187,7 @@ def _make_manifest(path: str = "/tmp/lesson.mp3") -> TranscriptManifest:
             )
         ],
     )
+
+
+def _normalize_terminal_output(output: str) -> str:
+    return ANSI_ESCAPE_RE.sub("", output)
