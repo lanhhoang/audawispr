@@ -1,0 +1,74 @@
+# Phase 8: One-Shot CLI + Python Facade
+
+## Goal
+
+Wire the implemented phases into a full one-shot CLI command and a narrow
+Python facade for future apps. After this phase, users can create an Anki deck
+directly from an audio file with one command.
+
+## User-Usable Result
+
+- `uv run audawispr AUDIO --output deck.apkg --language fr --ipa` runs
+  transcription, segmentation, enrichment, clipping, and export.
+- `Pipeline(output=Path("deck.apkg"), language="fr").run(Path("audio.mp3"), ipa=True)`
+  provides the same simple path for Python callers.
+
+## TODO
+
+- [ ] Add core pipeline request/result types for one-shot execution.
+- [ ] Add progress event, progress hook, and cooperative cancellation token types
+  suitable for CLI and future app wrappers.
+- [ ] Implement pipeline orchestration over transcribe, segment, enrich, clip,
+  and export phases.
+- [ ] Skip the enrich phase when `--ipa` is false and translation is `none`.
+- [ ] Store intermediate manifests and snippets under a work directory for
+  reruns and debugging.
+- [ ] Add root Typer callback/command for `audawispr AUDIO --output deck.apkg`.
+- [ ] Add simple `audawispr.pipeline.Pipeline` facade.
+- [ ] Add phase-specific error wrapping with actionable messages.
+- [ ] Add cancellation checks at phase boundaries and supported per-segment loops.
+- [ ] Ensure manifest-based phase commands from earlier phases keep working.
+- [ ] Update README with full quickstart and phase command examples.
+
+## Defaults
+
+- Output path ending in `.apkg` implies native APKG export.
+- Intermediate work directory is derived from the output path:
+  - `deck.apkg` uses `deck/_work/`
+  - directory output uses `<output>/_work/`
+- For `deck.apkg`, `deck/_work/` is a sibling directory next to the APKG path,
+  not content inside the APKG package.
+- Implement work directory paths with `Path` joins. The `/` examples above are
+  documentation shorthand, not string concatenation requirements.
+- Translation remains `none` only in Epic 1.
+- Cancellation is cooperative and does not interrupt an active Whisper model
+  call, FFmpeg subprocess, or APKG write mid-call.
+
+## Acceptance Checks
+
+- [ ] One-shot CLI tests with mocked transcription.
+- [ ] Python facade tests.
+- [ ] Tests for intermediate output paths.
+- [ ] Tests that enrichment is skipped when no IPA or translation is requested.
+- [ ] Tests that one-shot work directory derivation is correct with Windows-style
+  and POSIX-style paths.
+- [ ] Tests for phase-specific error messages.
+- [ ] Tests for cooperative cancellation before or between phases.
+- [ ] Regression tests for all phase subcommands.
+- [ ] `uv run pytest`
+- [ ] `uv run ruff check .`
+- [ ] `uv run ruff format --check .`
+- [ ] `uv run ty check src tests`
+- [ ] `uv run audawispr --help`
+- [ ] `uv run audawispr doctor`
+- [ ] CI quality workflow passes.
+- [ ] README documents one-shot CLI and Python facade usage.
+
+## Notes
+
+- This phase completes Epic 1 but should not add live translation providers.
+- Web and desktop wrappers remain later epics.
+
+## Verification Evidence
+
+- Pending.
