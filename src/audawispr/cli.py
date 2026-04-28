@@ -9,7 +9,8 @@ from audawispr.__about__ import __version__
 from audawispr.core.clipping import ClipOptions, clip_manifest_file
 from audawispr.core.diagnostics import collect_diagnostics
 from audawispr.core.enrichment import EnrichmentOptions, enrich_manifest_file
-from audawispr.core.errors import AudawisprError, ClippingError
+from audawispr.core.errors import AudawisprError, ClippingError, ExportError
+from audawispr.core.export import ExportOptions, export_manifest_file
 from audawispr.core.manifest import load_manifest, save_manifest
 from audawispr.core.segmentation import (
     SegmentationOptions,
@@ -344,6 +345,44 @@ def clip(
         _fail(str(exc))
 
     typer.echo(f"Wrote clipped manifest: {output}")
+
+
+@app.command()
+def export(
+    manifest: Annotated[
+        Path,
+        typer.Argument(
+            exists=False,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Clipped manifest JSON to export.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Output directory for CSV and media.",
+        ),
+    ],
+    format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            help="Export format. Epic 1 supports only 'anki-csv'.",
+        ),
+    ] = "anki-csv",
+) -> None:
+    """Export a clipped manifest to Anki-compatible format."""
+    try:
+        options = ExportOptions(format=format)
+        export_manifest_file(manifest, output, options)
+    except ExportError as exc:
+        _fail(str(exc))
+
+    typer.echo(f"Wrote export: {output}")
 
 
 def _fail(message: str) -> None:

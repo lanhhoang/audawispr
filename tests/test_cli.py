@@ -26,6 +26,7 @@ def test_help_displays_cli_name() -> None:
     assert "clip" in output
     assert "doctor" in output
     assert "enrich" in output
+    assert "export" in output
     assert "segment" in output
     assert "transcribe" in output
     assert "validate" in output
@@ -392,6 +393,70 @@ def test_clip_reports_clipping_error(monkeypatch, tmp_path) -> None:
             str(output_path),
             "--output-dir",
             str(tmp_path / "media"),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "test error" in result.stderr
+
+
+def test_export_help_displays_phase_6_options() -> None:
+    result = runner.invoke(
+        app,
+        ["export", "--help"],
+        env={"GITHUB_ACTIONS": "true"},
+    )
+    output = _normalize_terminal_output(result.stdout)
+
+    assert result.exit_code == 0
+    assert "--output" in output
+    assert "--format" in output
+
+
+def test_export_writes_csv(monkeypatch, tmp_path) -> None:
+    input_path = tmp_path / "clipped.json"
+    input_path.write_text("{}", encoding="utf-8")
+    output_dir = tmp_path / "anki-csv"
+
+    def fake_export(manifest_path, output_dir_arg, options=None):
+        output_dir_arg.mkdir(parents=True, exist_ok=True)
+        (output_dir_arg / "cards.csv").write_text("dummy", encoding="utf-8")
+
+    monkeypatch.setattr("audawispr.cli.export_manifest_file", fake_export)
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(input_path),
+            "--output",
+            str(output_dir),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Wrote export" in result.stdout
+
+
+def test_export_reports_error(monkeypatch, tmp_path) -> None:
+    from audawispr.core.errors import ExportError
+
+    input_path = tmp_path / "clipped.json"
+    input_path.write_text("{}", encoding="utf-8")
+    output_dir = tmp_path / "anki-csv"
+
+    def fake_export(*args, **kwargs):
+        raise ExportError("test error")
+
+    monkeypatch.setattr("audawispr.cli.export_manifest_file", fake_export)
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(input_path),
+            "--output",
+            str(output_dir),
         ],
     )
 

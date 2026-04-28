@@ -7,6 +7,7 @@ from audawispr.core.enrichment import (
     enrich_manifest,
     enrich_manifest_file,
 )
+from audawispr.core.export import ExportOptions, export_manifest_file
 from audawispr.core.manifest import TranscriptManifest, load_manifest, save_manifest
 from audawispr.core.segmentation import (
     SegmentationOptions,
@@ -19,6 +20,7 @@ from audawispr.core.transcription import TranscriptionOptions, transcribe_audio
 __all__ = [
     "ClipOptions",
     "EnrichmentOptions",
+    "ExportOptions",
     "SegmentationOptions",
     "TranscriptManifest",
     "TranscriptionOptions",
@@ -27,6 +29,7 @@ __all__ = [
     "default_inspection_tsv_path",
     "enrich_manifest",
     "enrich_manifest_file",
+    "export_manifest_file",
     "load_manifest",
     "save_inspection_tsv",
     "save_manifest",

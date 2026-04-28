@@ -1,6 +1,7 @@
 from audawispr.core import (
     ClipOptions,
     EnrichmentOptions,
+    ExportOptions,
     SegmentationOptions,
     TranscriptionOptions,
     TranscriptManifest,
@@ -9,6 +10,7 @@ from audawispr.core import (
     default_inspection_tsv_path,
     enrich_manifest,
     enrich_manifest_file,
+    export_manifest_file,
     load_manifest,
     save_inspection_tsv,
     save_manifest,
@@ -33,3 +35,5 @@ def test_core_exports_are_importable() -> None:
     assert callable(transcribe_audio)
     assert ClipOptions().audio_format == "mp3"
     assert callable(clip_manifest_file)
+    assert ExportOptions().format == "anki-csv"
+    assert callable(export_manifest_file)
