@@ -51,26 +51,26 @@ any Anki export is implemented.
 
 ## Acceptance Checks
 
-- [ ] Synthetic audio clipping test when FFmpeg is available.
-- [ ] CI always runs no-FFmpeg and FFmpeg error-path tests; real clipping tests
+- [x] Synthetic audio clipping test when FFmpeg is available.
+- [x] CI always runs no-FFmpeg and FFmpeg error-path tests; real clipping tests
       may be skipped when FFmpeg is unavailable.
-- [ ] Tests for stable snippet filenames.
-- [ ] Tests for `safe_segment_id` replacement, trimming, truncation, and empty
+- [x] Tests for stable snippet filenames.
+- [x] Tests for `safe_segment_id` replacement, trimming, truncation, and empty
       fallback.
-- [ ] Tests for padding bounded by audio duration.
-- [ ] Tests for POSIX-style serialized `audio_file` values on Windows-style
+- [x] Tests for padding bounded by audio duration.
+- [x] Tests for POSIX-style serialized `audio_file` values on Windows-style
       paths.
-- [ ] Tests for reuse and force regeneration.
-- [ ] Tests for missing FFmpeg error behavior.
-- [ ] `uv run pytest`
-- [ ] `uv run ruff check .`
-- [ ] `uv run ruff format --check .`
-- [ ] `uv run ty check src tests`
-- [ ] `uv run audawispr clip --help`
-- [ ] `uv run audawispr validate out/clipped.json` succeeds for a fixture
+- [x] Tests for reuse and force regeneration.
+- [x] Tests for missing FFmpeg error behavior.
+- [x] `uv run pytest`
+- [x] `uv run ruff check .`
+- [x] `uv run ruff format --check .`
+- [x] `uv run ty check src tests`
+- [x] `uv run audawispr clip --help`
+- [x] `uv run audawispr validate out/clipped.json` succeeds for a fixture
       clipped manifest.
-- [ ] CI quality workflow passes.
-- [ ] README documents Phase 5 command.
+- [x] CI quality workflow passes.
+- [x] README documents Phase 5 command.
 
 ## Notes
 
@@ -81,7 +81,15 @@ any Anki export is implemented.
 
 ## Verification Evidence
 
-- Pending.
+- `uv run pytest` — 71 passed.
+- `uv run ruff check .` — passed.
+- `uv run ruff format --check .` — passed.
+- `uv run ty check src tests` — passed.
+- `uv run audawispr clip --help` — all options shown.
+- `uv run audawispr validate out/clipped.json` — valid.
+- Remote GitHub Actions CI quality workflow — passed on Linux, macOS, and Windows.
+- Command `audawispr clip out/enriched.json --output out/clipped.json --output-dir out/media` produces `out/media/0000_seg-0000.mp3` and `out/media/0001_seg-0001.mp3`.
+- `out/clipped.json` contains `audio_file` fields with POSIX-style relative paths.
 
 ---
 

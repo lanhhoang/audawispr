@@ -22,7 +22,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 | 2   | [Local Transcription To Manifest](phase-2.md)        | ✅ Done    |
 | 3   | [Sentence Segmentation + Inspection TSV](phase-3.md) | ✅ Done    |
 | 4   | [IPA Enrichment + Translation Stubs](phase-4.md)     | ✅ Done    |
-| 5   | [Audio Snippet Clipping](phase-5.md)                 | ⏳ Pending, need CI status confirmation |
+| 5   | [Audio Snippet Clipping](phase-5.md)                 | ✅ Done |
 | 6   | [Importable Anki CSV Export](phase-6.md)             | ⬜ Planned |
 | 7   | [Native `.apkg` Export](phase-7.md)                  | ⬜ Planned |
 | 8   | [One-Shot CLI + Python Facade](phase-8.md)           | ⬜ Planned |
@@ -33,7 +33,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 - [x] Phase 2: Local Transcription To Manifest
 - [x] Phase 3: Sentence Segmentation + Inspection TSV
 - [x] Phase 4: IPA Enrichment + Translation Stubs
-- [ ] Phase 5: Audio Snippet Clipping (pending CI confirmation)
+- [x] Phase 5: Audio Snippet Clipping
 - [ ] Phase 6: Importable Anki CSV Export
 - [ ] Phase 7: Native `.apkg` Export
 - [ ] Phase 8: One-Shot CLI + Python Facade
