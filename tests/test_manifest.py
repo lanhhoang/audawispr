@@ -97,3 +97,20 @@ def test_load_manifest_rejects_missing_word_timestamps(tmp_path: Path) -> None:
 
     with pytest.raises(ManifestError):
         load_manifest(manifest_path)
+
+
+def test_load_manifest_accepts_segments_without_enrichment_fields(
+    tmp_path: Path,
+) -> None:
+    payload = make_manifest().model_dump(mode="json")
+    payload["segments"][0].pop("ipa", None)
+    payload["segments"][0].pop("translation", None)
+    payload["segments"][0].pop("translation_provider", None)
+    manifest_path = tmp_path / "old-schema-shape.json"
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = load_manifest(manifest_path)
+
+    assert loaded.segments[0].ipa is None
+    assert loaded.segments[0].translation is None
+    assert loaded.segments[0].translation_provider is None

@@ -17,5 +17,9 @@ class SegmentationError(AudawisprError):
     """Raised when transcript segments cannot be rebuilt."""
 
 
+class EnrichmentError(AudawisprError):
+    """Raised when linguistic enrichment cannot be applied."""
+
+
 class ManifestError(AudawisprError):
     """Raised when a manifest cannot be loaded, saved, or validated."""

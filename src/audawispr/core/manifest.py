@@ -71,6 +71,9 @@ class TranscriptSegment(BaseModel):
     end: float = Field(ge=0)
     text: str = Field(min_length=1)
     words: list[TranscriptWord] = Field(min_length=1)
+    ipa: str | None = None
+    translation: str | None = None
+    translation_provider: str | None = None
 
     @model_validator(mode="after")
     def validate_segment_timing(self) -> TranscriptSegment:

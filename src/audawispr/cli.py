@@ -7,6 +7,7 @@ import typer
 
 from audawispr.__about__ import __version__
 from audawispr.core.diagnostics import collect_diagnostics
+from audawispr.core.enrichment import EnrichmentOptions, enrich_manifest_file
 from audawispr.core.errors import AudawisprError
 from audawispr.core.manifest import load_manifest, save_manifest
 from audawispr.core.segmentation import (
@@ -218,6 +219,51 @@ def segment(
 
     typer.echo(f"Wrote segmented manifest: {output}")
     typer.echo(f"Wrote inspection TSV: {tsv_output}")
+
+
+@app.command()
+def enrich(
+    manifest: Annotated[
+        Path,
+        typer.Argument(
+            exists=False,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Segmented manifest JSON to enrich.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Enriched manifest JSON output path.",
+        ),
+    ],
+    ipa: Annotated[
+        bool,
+        typer.Option("--ipa/--no-ipa", help="Generate IPA pronunciation."),
+    ] = False,
+    translate: Annotated[
+        str,
+        typer.Option(
+            "--translate",
+            help="Translation provider. Epic 1 supports only 'none'.",
+        ),
+    ] = "none",
+) -> None:
+    """Add optional IPA and translation fields to a segmented manifest."""
+    try:
+        options = EnrichmentOptions(
+            ipa=ipa,
+            translation_provider=translate,
+        )
+        enrich_manifest_file(manifest, output, options)
+    except AudawisprError as exc:
+        _fail(str(exc))
+
+    typer.echo(f"Wrote enriched manifest: {output}")
 
 
 def _fail(message: str) -> None:
