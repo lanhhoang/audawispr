@@ -58,3 +58,12 @@ uv run ruff check .
 uv run ruff format --check .
 uv run ty check src tests
 ```
+
+## CI
+
+GitHub Actions runs the same quality checks with `uv sync --dev --frozen`.
+Because this is a private repository, the workflow keeps routine pushes cheaper:
+
+- Ubuntu runs on pushes and pull requests targeting `master`.
+- macOS and Windows run on pull requests targeting `master` and on manual
+  `workflow_dispatch` runs.

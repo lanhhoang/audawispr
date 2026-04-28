@@ -31,8 +31,9 @@ is installed and inspect local runtime readiness.
   `AUDAWISPR_FFPROBE`, `PATH`, or static-ffmpeg.
 - [x] Ensure diagnostics work with Windows `.exe` tool paths as well as macOS
   and Linux binaries.
-- [x] Add initial CI quality workflow targeting Linux, macOS, and Windows for
-  tests, lint, format check, and typecheck on `push` and `pull_request`.
+- [x] Add initial CI quality workflow targeting Linux on `push` and
+  `pull_request`, plus macOS and Windows on `pull_request` and manual
+  `workflow_dispatch`, for tests, lint, format check, and typecheck.
 - [x] Add initial tests for CLI help, version output, and doctor output shape.
 - [x] Update README with installation and Phase 1 diagnostics usage.
 
@@ -57,7 +58,8 @@ is installed and inspect local runtime readiness.
 - [x] CI quality workflow exists for Linux, macOS, and Windows and runs
   `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, and
   `uv run ty check src tests`.
-- [x] CI workflow triggers on `push` and `pull_request`.
+- [x] CI workflow triggers Linux on `push` and `pull_request`, and triggers
+  macOS and Windows on `pull_request` and manual `workflow_dispatch`.
 
 ## Notes
 
@@ -79,8 +81,9 @@ is installed and inspect local runtime readiness.
 - `uv run audawispr --version` passed and reports `audawispr 0.1.0`.
 - `uv run audawispr doctor` passed and reports package, Python, FFmpeg, and
   FFprobe readiness.
-- CI workflow added at `.github/workflows/quality.yml` for Linux, macOS, and
-  Windows on `push` and `pull_request`.
+- CI workflow added at `.github/workflows/quality.yml`; Linux runs on `push`
+  and `pull_request`, while macOS and Windows run on `pull_request` and manual
+  `workflow_dispatch` to reduce private-repo Actions cost.
 
 ## Actual Implementation
 
@@ -117,10 +120,10 @@ is installed and inspect local runtime readiness.
 - Add pytest smoke coverage for package import/version, CLI help, version
   output, and doctor output shape. Mock binary discovery where needed so CI does
   not depend on local FFmpeg installs.
-- Add a GitHub Actions workflow for `push` and `pull_request` on Linux, macOS,
-  and Windows. CI must run `uv sync --dev`, `uv run pytest`,
-  `uv run ruff check .`, `uv run ruff format --check .`, and
-  `uv run ty check src tests`.
+- Add a GitHub Actions workflow for Linux on `push` and `pull_request`, with
+  macOS and Windows on `pull_request` and manual `workflow_dispatch`. CI must
+  run `uv sync --dev`, `uv run pytest`, `uv run ruff check .`,
+  `uv run ruff format --check .`, and `uv run ty check src tests`.
 - Expand `.gitignore` with generated manifests, snippets/media, APKG/deck
   outputs, output directories, and Whisper/model caches.
 - Update `README.md` with Phase 1 install, CLI help, version, and diagnostics
