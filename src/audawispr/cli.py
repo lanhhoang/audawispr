@@ -9,6 +9,12 @@ from audawispr.__about__ import __version__
 from audawispr.core.diagnostics import collect_diagnostics
 from audawispr.core.errors import AudawisprError
 from audawispr.core.manifest import load_manifest, save_manifest
+from audawispr.core.segmentation import (
+    SegmentationOptions,
+    default_inspection_tsv_path,
+    save_inspection_tsv,
+    segment_manifest,
+)
 from audawispr.core.transcription import TranscriptionOptions, transcribe_audio
 
 app = typer.Typer(
@@ -139,6 +145,79 @@ def transcribe(
         _fail(str(exc))
 
     typer.echo(f"Wrote transcript manifest: {output}")
+
+
+@app.command()
+def segment(
+    manifest: Annotated[
+        Path,
+        typer.Argument(
+            exists=False,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Transcript manifest JSON to segment.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Segmented manifest JSON output path.",
+        ),
+    ],
+    inspection_tsv: Annotated[
+        Path | None,
+        typer.Option(
+            "--inspection-tsv",
+            help="Inspection TSV output path. Defaults next to the JSON output.",
+        ),
+    ] = None,
+    pause_split_ms: Annotated[
+        int,
+        typer.Option("--pause-split-ms", help="Pause threshold for splitting."),
+    ] = 700,
+    min_duration_ms: Annotated[
+        int,
+        typer.Option("--min-duration-ms", help="Minimum segment duration."),
+    ] = 600,
+    max_duration_ms: Annotated[
+        int,
+        typer.Option("--max-duration-ms", help="Maximum segment duration."),
+    ] = 7000,
+    merge_short: Annotated[
+        bool,
+        typer.Option(
+            "--merge-short/--no-merge-short",
+            help="Merge segments shorter than the minimum duration.",
+        ),
+    ] = True,
+) -> None:
+    """Segment a transcript manifest into sentence-like learning units."""
+    try:
+        options = SegmentationOptions(
+            pause_split_ms=pause_split_ms,
+            min_duration_ms=min_duration_ms,
+            max_duration_ms=max_duration_ms,
+            merge_short=merge_short,
+        )
+        transcript = load_manifest(manifest)
+        segmented_manifest = segment_manifest(transcript, options)
+        save_manifest(segmented_manifest, output)
+        load_manifest(output)
+
+        tsv_output = (
+            default_inspection_tsv_path(output)
+            if inspection_tsv is None
+            else inspection_tsv
+        )
+        save_inspection_tsv(segmented_manifest, tsv_output)
+    except AudawisprError as exc:
+        _fail(str(exc))
+
+    typer.echo(f"Wrote segmented manifest: {output}")
+    typer.echo(f"Wrote inspection TSV: {tsv_output}")
 
 
 def _fail(message: str) -> None:
