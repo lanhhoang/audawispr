@@ -10,7 +10,7 @@ before any audio clipping or Anki export exists.
 
 - `uv run audawispr segment out/transcript.json --output out/segments.json`
   writes a segmented manifest.
-- A review TSV is written next to the output manifest unless an explicit TSV
+- An inspection TSV is written next to the output manifest unless an explicit TSV
   path is provided.
 
 ## TODO
@@ -23,8 +23,8 @@ before any audio clipping or Anki export exists.
   manifest.
 - [ ] Rebuild segment IDs, indexes, text, start/end timestamps, and word lists
   for each segmented unit.
-- [ ] Add review TSV writer with id, index, start/end timestamps, and text.
-- [ ] Add `audawispr segment` CLI with output and review TSV options.
+- [ ] Add inspection TSV writer with id, index, start/end timestamps, and text.
+- [ ] Add `audawispr segment` CLI with output and inspection TSV options.
 - [ ] Add clear errors for manifests with no word timestamps, invalid options,
   invalid timestamps, and validation failure.
 
@@ -50,5 +50,7 @@ before any audio clipping or Anki export exists.
 ## Notes
 
 - Do not implement IPA, clipping, or export in this phase.
+- The TSV is inspection-only in Epic 1. Do not implement TSV edit import/apply
+  behavior in this phase.
 - The segmented manifest should remain valid input for later enrichment and
   clipping phases.

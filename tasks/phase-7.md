@@ -7,9 +7,9 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 
 ## User-Usable Result
 
-- `uv run audawispr export out/clipped.json --output deck.apkg` writes a
-  non-empty `.apkg` file with text, audio, IPA, optional translation, and source
-  metadata fields.
+- `uv run audawispr export out/clipped.json --output deck.apkg --deck-name "My French Deck"`
+  writes a non-empty `.apkg` file with text, audio, IPA, optional translation,
+  and source metadata fields.
 
 ## TODO
 
@@ -17,6 +17,7 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 - [ ] Extend export format support with `apkg`.
 - [ ] Define default deck name, model name, deck ID, model ID, fields, and card
   template.
+- [ ] Add `--deck-name` CLI option while keeping a stable default deck name.
 - [ ] Add audio media embedding for each segment with an `audio_file`.
 - [ ] Generate stable note GUIDs from source audio hash plus segment ID.
 - [ ] Infer `apkg` format when export output path ends in `.apkg`.
@@ -29,12 +30,16 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 - Deck name: `audawispr::French`
 - Fields: `SourceText`, `Audio`, `IPA`, `Translation`, `SourceFile`,
   `TimestampRange`, `SegmentId`
+- Card front shows source text and audio.
+- Card back shows IPA, translation, source file, and timestamp range.
 - Stable note identity: source audio hash plus segment ID.
 
 ## Acceptance Checks
 
 - [ ] Tests for `.apkg` file generation.
 - [ ] Tests for media inclusion.
+- [ ] Tests for `--deck-name`.
+- [ ] Tests for card template field mapping.
 - [ ] Tests for stable note GUIDs.
 - [ ] Tests for missing or empty audio errors.
 - [ ] Tests that `anki-csv` export still passes.

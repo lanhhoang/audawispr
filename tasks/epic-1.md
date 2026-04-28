@@ -12,6 +12,9 @@ only. Do not copy them wholesale into this repo.
 
 ## Phase Dashboard
 
+After completing each phase, update this dashboard status, check the matching
+Epic TODO item, and add the verification evidence to the completed phase file.
+
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | [Project Foundation + Diagnostics](phase-1.md) | ⬜ Planned |
@@ -39,9 +42,10 @@ only. Do not copy them wholesale into this repo.
 - CLI:
   - `audawispr AUDIO --output deck.apkg --language fr --ipa`
   - `audawispr transcribe AUDIO --output out/transcript.json`
+  - `audawispr validate MANIFEST`
   - `audawispr segment MANIFEST --output out/segments.json`
   - `audawispr enrich MANIFEST --ipa --output out/enriched.json`
-  - `audawispr clip MANIFEST --output-dir out/media`
+  - `audawispr clip MANIFEST --output out/clipped.json --output-dir out/media`
   - `audawispr export MANIFEST --output deck.apkg`
   - `audawispr doctor`
 - Python API:
@@ -75,3 +79,5 @@ only. Do not copy them wholesale into this repo.
   API key is required.
 - Translation in Epic 1 is architectural only: no network provider calls until a
   later epic explicitly adds them.
+- Transcription manifests must include word timestamps, because Phase 3
+  segmentation depends on them.

@@ -16,8 +16,8 @@ directly from an audio file with one command.
 ## TODO
 
 - [ ] Add core pipeline request/result types for one-shot execution.
-- [ ] Add progress event and progress hook types suitable for CLI and future app
-  wrappers.
+- [ ] Add progress event, progress hook, and cooperative cancellation token types
+  suitable for CLI and future app wrappers.
 - [ ] Implement pipeline orchestration over transcribe, segment, enrich, clip,
   and export phases.
 - [ ] Store intermediate manifests and snippets under a work directory for
@@ -25,6 +25,7 @@ directly from an audio file with one command.
 - [ ] Add root Typer callback/command for `audawispr AUDIO --output deck.apkg`.
 - [ ] Add simple `audawispr.pipeline.Pipeline` facade.
 - [ ] Add phase-specific error wrapping with actionable messages.
+- [ ] Add cancellation checks at phase boundaries and supported per-segment loops.
 - [ ] Ensure manifest-based phase commands from earlier phases keep working.
 - [ ] Update README with full quickstart and phase command examples.
 
@@ -33,6 +34,8 @@ directly from an audio file with one command.
 - Output path ending in `.apkg` implies native APKG export.
 - Intermediate work directory is derived from the output path.
 - Translation remains `none` only in Epic 1.
+- Cancellation is cooperative and does not interrupt an active Whisper model
+  call, FFmpeg subprocess, or APKG write mid-call.
 
 ## Acceptance Checks
 
@@ -40,6 +43,7 @@ directly from an audio file with one command.
 - [ ] Python facade tests.
 - [ ] Tests for intermediate output paths.
 - [ ] Tests for phase-specific error messages.
+- [ ] Tests for cooperative cancellation before or between phases.
 - [ ] Regression tests for all phase subcommands.
 - [ ] `uv run pytest`
 - [ ] `uv run ruff check .`

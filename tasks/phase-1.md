@@ -19,6 +19,9 @@ is installed and inspect local runtime readiness.
   `typer`, `static-ffmpeg`, `pytest`, `ruff`, and `ty`.
 - [ ] Add package skeleton under `src/audawispr/` with `__init__.py`,
   `__about__.py`, `__main__.py`, and `cli.py`.
+- [ ] Add `.gitignore` entries for `.venv/`, Python caches, tool caches,
+  Whisper/model caches, generated manifests, snippets, decks, and output
+  directories.
 - [ ] Add a Typer app with `--version`, `doctor`, and placeholder subcommand
   registration points for later phases.
 - [ ] Add a small diagnostics core that checks Python version, package version,
@@ -42,3 +45,5 @@ is installed and inspect local runtime readiness.
 - Do not implement transcription or manifest behavior in this phase.
 - Keep diagnostics useful even when FFmpeg is missing; missing tools should be
   reported, not crash the command.
+- Do not commit generated transcription output, snippets, APKG files, model
+  caches, or machine-specific paths.

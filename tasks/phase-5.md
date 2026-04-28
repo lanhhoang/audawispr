@@ -8,9 +8,9 @@ any Anki export is implemented.
 
 ## User-Usable Result
 
-- `uv run audawispr clip out/enriched.json --output-dir out/media` writes audio
-  snippets.
-- The output manifest is updated with `audio_file` values for each segment.
+- `uv run audawispr clip out/enriched.json --output out/clipped.json --output-dir out/media`
+  writes audio snippets.
+- `out/clipped.json` is written with `audio_file` values for each segment.
 
 ## TODO
 
@@ -33,6 +33,8 @@ any Anki export is implemented.
 - `padding_before_ms=150`
 - `padding_after_ms=250`
 - Reuse snippets unless `--force` is set.
+- `--output` is required; clipping must not modify the input manifest in place
+  unless a later plan explicitly adds an in-place mode.
 
 ## Acceptance Checks
 
@@ -51,3 +53,4 @@ any Anki export is implemented.
 
 - Do not implement Anki export in this phase.
 - Snippet paths must be suitable for later CSV and APKG export.
+- Store `audio_file` paths relative to the clipped manifest location.

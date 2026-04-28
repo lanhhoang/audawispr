@@ -10,7 +10,9 @@ manifest without any transcription API key.
 
 - `uv run audawispr transcribe AUDIO --output out/transcript.json --language fr`
   writes a manifest containing source audio metadata, transcription settings,
-  raw segment text, timestamps, and word timestamps where available.
+  raw segment text, timestamps, and word timestamps.
+- `uv run audawispr validate out/transcript.json` validates schema and segment
+  timing.
 
 ## TODO
 
@@ -19,10 +21,14 @@ manifest without any transcription API key.
 - [ ] Define manifest models with schema version, app version, timestamps,
   language, source audio metadata, transcription settings, segments, and words.
 - [ ] Implement manifest save/load/validation helpers with atomic JSON writes.
+- [ ] Add `audawispr validate MANIFEST` for strict schema and timestamp
+  validation.
 - [ ] Implement source audio metadata generation including file name, absolute
   path, size, SHA-256, language, and optional duration.
 - [ ] Implement transcription core using `faster-whisper` with word timestamps
   and VAD enabled by default.
+- [ ] Treat missing word timestamps from transcription as a transcription error,
+  because Phase 3 segmentation requires them.
 - [ ] Add `audawispr transcribe` CLI options for input path, output path,
   language, model size, device, compute type, and VAD.
 - [ ] Add clear errors for missing input audio, missing dependency, model
@@ -46,9 +52,12 @@ manifest without any transcription API key.
 - [ ] `uv run ruff format --check .`
 - [ ] `uv run ty check src tests`
 - [ ] `uv run audawispr transcribe --help`
+- [ ] `uv run audawispr validate --help`
 
 ## Notes
 
 - First-time model download may require network, but no transcription API key is
   required.
+- Word timestamps are required in Epic 1. Do not add segment-level fallback
+  segmentation unless a later plan explicitly changes that policy.
 - Do not implement segmentation, IPA, clipping, or export in this phase.
