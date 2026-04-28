@@ -216,3 +216,28 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# audawispr generated outputs
+outputs/
+out/
+media/
+snippets/
+*.apkg
+*.anki2
+*.mp3
+*.wav
+*.m4a
+*.flac
+transcript.json
+segments.json
+enriched.json
+clipped.json
+manifest.json
+cards.csv
+
+# Local model caches
+.cache/
+.models/
+models/
+whisper-cache/
+faster-whisper-cache/
