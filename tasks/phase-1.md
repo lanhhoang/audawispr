@@ -15,26 +15,26 @@ is installed and inspect local runtime readiness.
 
 ## TODO
 
-- [ ] Scaffold `pyproject.toml` with `hatchling`, `uv`, Python 3.11+,
+- [x] Scaffold `pyproject.toml` with `hatchling`, `uv`, Python 3.11+,
   `typer`, `static-ffmpeg`, `pytest`, `ruff`, and `ty`.
-- [ ] Add package skeleton under `src/audawispr/` with `__init__.py`,
+- [x] Add package skeleton under `src/audawispr/` with `__init__.py`,
   `__about__.py`, `__main__.py`, and `cli.py`.
-- [ ] Add `tests/` with at least one passing CLI/package smoke test so Phase 1
+- [x] Add `tests/` with at least one passing CLI/package smoke test so Phase 1
   quality commands have real test input.
-- [ ] Add `.gitignore` entries for `.venv/`, Python caches, tool caches,
+- [x] Add `.gitignore` entries for `.venv/`, Python caches, tool caches,
   Whisper/model caches, generated manifests, snippets, decks, and output
   directories.
-- [ ] Add a Typer app with `--version` and `doctor`. Do not register visible
+- [x] Add a Typer app with `--version` and `doctor`. Do not register visible
   future commands until their phases implement them.
-- [ ] Add a small diagnostics core that checks Python version, package version,
+- [x] Add a small diagnostics core that checks Python version, package version,
   and FFmpeg/FFprobe availability from `AUDAWISPR_FFMPEG`,
   `AUDAWISPR_FFPROBE`, `PATH`, or static-ffmpeg.
-- [ ] Ensure diagnostics work with Windows `.exe` tool paths as well as macOS
+- [x] Ensure diagnostics work with Windows `.exe` tool paths as well as macOS
   and Linux binaries.
-- [ ] Add initial CI quality workflow targeting Linux, macOS, and Windows for
+- [x] Add initial CI quality workflow targeting Linux, macOS, and Windows for
   tests, lint, format check, and typecheck on `push` and `pull_request`.
-- [ ] Add initial tests for CLI help, version output, and doctor output shape.
-- [ ] Update README with installation and Phase 1 diagnostics usage.
+- [x] Add initial tests for CLI help, version output, and doctor output shape.
+- [x] Update README with installation and Phase 1 diagnostics usage.
 
 ## Defaults
 
@@ -47,17 +47,17 @@ is installed and inspect local runtime readiness.
 
 ## Acceptance Checks
 
-- [ ] `uv run pytest`
-- [ ] `uv run ruff check .`
-- [ ] `uv run ruff format --check .`
-- [ ] `uv run ty check src tests`
-- [ ] `uv run audawispr --help`
-- [ ] `uv run audawispr --version`
-- [ ] `uv run audawispr doctor`
-- [ ] CI quality workflow exists for Linux, macOS, and Windows and runs
+- [x] `uv run pytest`
+- [x] `uv run ruff check .`
+- [x] `uv run ruff format --check .`
+- [x] `uv run ty check src tests`
+- [x] `uv run audawispr --help`
+- [x] `uv run audawispr --version`
+- [x] `uv run audawispr doctor`
+- [x] CI quality workflow exists for Linux, macOS, and Windows and runs
   `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, and
   `uv run ty check src tests`.
-- [ ] CI workflow triggers on `push` and `pull_request`.
+- [x] CI workflow triggers on `push` and `pull_request`.
 
 ## Notes
 
@@ -69,7 +69,18 @@ is installed and inspect local runtime readiness.
 
 ## Verification Evidence
 
-- Pending.
+- `uv sync --dev` completed successfully.
+- `uv run pytest` passed: 5 tests.
+- `uv run ruff check .` passed.
+- `uv run ruff format --check .` passed.
+- `uv run ty check src tests` passed.
+- `uv run audawispr --help` passed and shows only the implemented `doctor`
+  command.
+- `uv run audawispr --version` passed and reports `audawispr 0.1.0`.
+- `uv run audawispr doctor` passed and reports package, Python, FFmpeg, and
+  FFprobe readiness.
+- CI workflow added at `.github/workflows/quality.yml` for Linux, macOS, and
+  Windows on `push` and `pull_request`.
 
 ## Actual Implementation
 
