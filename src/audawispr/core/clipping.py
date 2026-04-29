@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -86,6 +87,10 @@ def clip_manifest_file(
         )
     ffmpeg_path = ffmpeg.path
 
+    _BITRATE_RE = re.compile(r"^\d+[kM]?$")
+    if not _BITRATE_RE.match(opts.bitrate):
+        raise ClippingError(f"Invalid bitrate: {opts.bitrate!r}")
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     duration_sec = manifest.source_audio.duration_seconds
@@ -126,6 +131,7 @@ def clip_manifest_file(
             result = subprocess.run(
                 [
                     ffmpeg_path,
+                    "-nostdin",
                     "-y",
                     "-ss",
                     f"{padded_start:.3f}",

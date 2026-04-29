@@ -4,6 +4,7 @@ import csv
 import html
 import logging
 import os
+import re
 import shutil
 import tempfile
 from dataclasses import dataclass
@@ -133,10 +134,21 @@ def _export_csv(
     media_dir = resolved_output / "media"
     media_dir.mkdir(parents=True, exist_ok=True)
 
+    audio_count = 0
     for segment in manifest.segments:
         if segment.audio_file:
-            src = _resolve_audio(manifest_path, segment.audio_file)
+            try:
+                src = _resolve_audio(manifest_path, segment.audio_file)
+            except ExportError:
+                logger.warning("Segment %s audio file not found; skipping", segment.id)
+                continue
             _copy_media(src, media_dir)
+            audio_count += 1
+        else:
+            logger.warning("Segment %s has no audio file; skipping", segment.id)
+
+    if audio_count == 0:
+        raise ExportError("no segments with audio files to export")
 
     csv_path = resolved_output / "cards.csv"
     temp_path: Path | None = None
@@ -207,11 +219,17 @@ def _export_apkg(
             return genanki.guid_for(sha256, self.fields[6])
 
     media_files: list[str] = []
+    audio_count = 0
 
     for segment in manifest.segments:
         if segment.audio_file:
-            src = _resolve_audio(manifest_path, segment.audio_file)
+            try:
+                src = _resolve_audio(manifest_path, segment.audio_file)
+            except ExportError:
+                logger.warning("Segment %s audio file not found; skipping", segment.id)
+                continue
             media_files.append(str(src))
+            audio_count += 1
 
             basename = src.name
             sound_ref = f"[sound:{basename}]"
@@ -233,7 +251,6 @@ def _export_apkg(
         else:
             logger.warning("Segment %s has no audio file; skipping", segment.id)
 
-    audio_count = sum(1 for s in manifest.segments if s.audio_file)
     if audio_count == 0:
         raise ExportError("no segments with audio files to export")
 
@@ -274,7 +291,9 @@ def _safe_csv_cell(value: str) -> str:
     # Strip \r first — lstrip() does not strip carriage return
     # (CR can cause CSV row break and formula injection bypass)
     cleaned = value.replace("\r", "")
-    stripped = cleaned.lstrip()
+    # Use re.sub for Unicode-aware stripping; Python 3.11 str.lstrip()
+    # only strips ASCII whitespace (\u00a0=2+2 would bypass)
+    stripped = re.sub(r"^\s+", "", cleaned)
     if stripped and stripped[0] in "=+-@":
         return "'" + cleaned
     return cleaned

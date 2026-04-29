@@ -109,6 +109,19 @@ def _derive_work_dir(output: Path) -> Path:
     return work_dir
 
 
+_MIN_FREE_SPACE = 500 * 1024 * 1024  # 500 MB
+
+
+def _check_disk_space(work_dir: Path) -> None:
+    """Raise OneShotError if disk space on work_dir volume is too low."""
+    usage = shutil.disk_usage(work_dir)
+    if usage.free < _MIN_FREE_SPACE:
+        raise OneShotError(
+            f"Only {usage.free / (1024**3):.1f} GiB free on {work_dir}, "
+            f"need at least {_MIN_FREE_SPACE / (1024**3):.1f} GiB"
+        )
+
+
 def run_pipeline(
     request: PipelineRequest,
     *,
@@ -121,6 +134,7 @@ def run_pipeline(
     """
     work_dir = _derive_work_dir(request.output)
     work_dir.mkdir(parents=True, exist_ok=True)
+    _check_disk_space(work_dir)
 
     def _emit(phase: str, message: str) -> None:
         if progress_hook is not None:
@@ -146,10 +160,15 @@ def run_pipeline(
             manifest = transcribe_audio(request.audio, transcription_options)
             transcript_path = work_dir / "transcript.json"
             save_manifest(manifest, transcript_path)
-        except (TranscriptionError, InputAudioError, ManifestError) as exc:
+        except (TranscriptionError, InputAudioError) as exc:
             raise OneShotError(
                 f"Transcription failed: {exc}. "
                 "Try a different --model-size or --device."
+            ) from exc
+        except ManifestError as exc:
+            raise OneShotError(
+                f"Transcription failed: {exc}. "
+                "Check that the manifest is valid and disk is not full."
             ) from exc
 
         # Segment
@@ -165,10 +184,15 @@ def run_pipeline(
             manifest = segment_manifest(manifest, segmentation_options)
             segments_path = work_dir / "segments.json"
             save_manifest(manifest, segments_path)
-        except (SegmentationError, ManifestError) as exc:
+        except SegmentationError as exc:
             raise OneShotError(
                 f"Segmentation failed: {exc}. "
                 "Check your audio quality or adjust --pause-split-ms."
+            ) from exc
+        except ManifestError as exc:
+            raise OneShotError(
+                f"Segmentation failed: {exc}. "
+                "Check that the manifest is valid and disk is not full."
             ) from exc
 
         # Enrich (conditional)
@@ -185,9 +209,14 @@ def run_pipeline(
                 enriched_path = work_dir / "enriched.json"
                 save_manifest(manifest, enriched_path)
                 enrichment_happened = True
-            except (EnrichmentError, ManifestError) as exc:
+            except EnrichmentError as exc:
                 raise OneShotError(
                     f"Enrichment failed: {exc}. Check --language or disable --ipa."
+                ) from exc
+            except ManifestError as exc:
+                raise OneShotError(
+                    f"Enrichment failed: {exc}. "
+                    "Check that the manifest is valid and disk is not full."
                 ) from exc
 
         # Clip
@@ -207,10 +236,15 @@ def run_pipeline(
                 media_dir,
                 ClipOptions(),
             )
-        except (ClippingError, ManifestError) as exc:
+        except ClippingError as exc:
             raise OneShotError(
                 f"Clipping failed: {exc}. "
                 "Check that FFmpeg is installed and the source audio is valid."
+            ) from exc
+        except ManifestError as exc:
+            raise OneShotError(
+                f"Clipping failed: {exc}. "
+                "Check that the manifest is valid and disk is not full."
             ) from exc
 
         # Export
@@ -223,9 +257,14 @@ def run_pipeline(
         )
         try:
             export_manifest_file(clipped_path, request.output, export_options)
-        except (ExportError, ManifestError) as exc:
+        except ExportError as exc:
             raise OneShotError(
                 f"Export failed: {exc}. Check the output path and available disk space."
+            ) from exc
+        except ManifestError as exc:
+            raise OneShotError(
+                f"Export failed: {exc}. "
+                "Check that the manifest is valid and disk is not full."
             ) from exc
 
         success = True
@@ -243,24 +282,34 @@ def run_pipeline(
         )
 
         if not is_cancelled and success and not request.keep_work and work_dir.exists():
-            # C2: Symlink safety — manually check all entries including dotfiles
+            # C2: Symlink safety — manually unlink all symlinks including dotfiles
             # before cleanup. os.scandir catches ALL entries unlike rglob("*")
             # which skips dot-prefixed files.
-            def _has_symlink(dirpath: Path) -> bool:
+            def _remove_symlinks(path: Path) -> int:
+                count = 0
                 try:
-                    for entry in os.scandir(str(dirpath)):
+                    for entry in os.scandir(str(path)):
                         if entry.is_symlink():
-                            return True
-                        if entry.is_dir(follow_symlinks=False):
-                            if _has_symlink(Path(entry.path)):
-                                return True
-                except PermissionError:
-                    return True
-                return False
+                            try:
+                                if entry.is_dir(follow_symlinks=False):
+                                    os.rmdir(entry.path)
+                                else:
+                                    os.unlink(entry.path)
+                            except OSError:
+                                logger.warning(
+                                    "Could not remove symlink: %s", entry.path
+                                )
+                                continue
+                            count += 1
+                except OSError:
+                    pass
+                return count
 
-            if _has_symlink(work_dir):
+            linked = _remove_symlinks(work_dir)
+            if linked:
                 logger.warning(
-                    "Work directory contains symlinks, cleaning with care: %s", work_dir
+                    "Removed %d symlink(s) from work directory before cleanup",
+                    linked,
                 )
 
             shutil.rmtree(work_dir, ignore_errors=True)

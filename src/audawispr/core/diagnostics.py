@@ -115,7 +115,7 @@ def _status_for_path(name: str, path: Path, source: str) -> ToolStatus:
 def _read_tool_version(path: Path) -> tuple[str | None, str | None]:
     try:
         completed = subprocess.run(
-            [str(path), "-version"],
+            [str(path), "-nostdin", "-version"],
             check=False,
             capture_output=True,
             text=True,
@@ -140,7 +140,7 @@ def _read_tool_version(path: Path) -> tuple[str | None, str | None]:
 def _find_static_ffmpeg_tool(name: str) -> tuple[Path | None, str | None]:
     try:
         from static_ffmpeg import run
-    except Exception as exc:  # pragma: no cover - depends on optional provider state
+    except ImportError as exc:  # pragma: no cover - depends on optional provider state
         return None, str(exc)
 
     get_platform_dir = getattr(run, "get_platform_dir", None)
@@ -149,7 +149,7 @@ def _find_static_ffmpeg_tool(name: str) -> tuple[Path | None, str | None]:
 
     try:
         static_dir = Path(get_platform_dir())
-    except Exception as exc:  # pragma: no cover - depends on optional provider state
+    except ImportError as exc:  # pragma: no cover - depends on optional provider state
         return None, str(exc)
 
     executable_name = f"{name}.exe" if sys.platform == "win32" else name

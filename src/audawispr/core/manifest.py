@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from audawispr.__about__ import __version__
 from audawispr.core.errors import ManifestError
@@ -26,6 +34,17 @@ class SourceAudio(BaseModel):
     path: str
     size_bytes: int = Field(ge=0)
     sha256: str = Field(min_length=64, max_length=64)
+
+    @field_validator("sha256", mode="after")
+    @classmethod
+    def _check_sha256_hex(cls, value: str) -> str:
+        if not re.fullmatch(r"^[0-9a-fA-F]{64}$", value):
+            raise ValueError(
+                f"sha256 must be a 64-character hex string, got: "
+                f"{value[:20]}{'...' if len(value) > 20 else ''}"
+            )
+        return value
+
     language: str = Field(min_length=1)
     duration_seconds: float | None = Field(default=None, ge=0)
 

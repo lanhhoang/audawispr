@@ -239,7 +239,7 @@ def test_export_missing_snippet_error(tmp_path: Path) -> None:
     manifest_path = _write_manifest(tmp_path, manifest)
     output_dir = tmp_path / "anki-csv"
 
-    with pytest.raises(ExportError, match="audio file does not exist"):
+    with pytest.raises(ExportError, match="no segments with audio files to export"):
         export_manifest_file(manifest_path, output_dir)
 
 
@@ -418,7 +418,7 @@ def test_export_apkg_missing_snippet_error(tmp_path: Path) -> None:
     manifest_path = _write_manifest(tmp_path, manifest)
     apkg_path = tmp_path / "deck.apkg"
 
-    with pytest.raises(ExportError, match="audio file does not exist"):
+    with pytest.raises(ExportError, match="no segments with audio files to export"):
         export_manifest_file(manifest_path, apkg_path)
 
 

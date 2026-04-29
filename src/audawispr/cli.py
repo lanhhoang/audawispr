@@ -1,5 +1,7 @@
 """Command line interface for audawispr."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Annotated
 
@@ -22,6 +24,7 @@ from audawispr.core.segmentation import (
 from audawispr.core.transcription import TranscriptionOptions, transcribe_audio
 
 _VERBOSE = False
+"""Module-level toggle for verbose output in single-invocation CLI."""
 
 
 class _OneShotFallbackGroup(typer.core.TyperGroup):
