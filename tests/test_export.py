@@ -1,3 +1,5 @@
+import sqlite3
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -258,7 +260,7 @@ def test_export_unsupported_format(tmp_path: Path) -> None:
     output_dir = tmp_path / "anki-csv"
 
     with pytest.raises(ExportError, match="unsupported export format"):
-        export_manifest_file(manifest_path, output_dir, ExportOptions(format="apkg"))
+        export_manifest_file(manifest_path, output_dir, ExportOptions(format="pdf"))
 
 
 # --- Deterministic rerun ---
@@ -277,3 +279,149 @@ def test_export_deterministic_rerun(tmp_path: Path) -> None:
     second_csv = (output_dir / "cards.csv").read_bytes()
 
     assert first_csv == second_csv
+
+
+# --- APKG export ---
+
+
+def test_export_apkg_file_created(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    export_manifest_file(manifest_path, apkg_path)
+
+    assert apkg_path.exists()
+    assert apkg_path.stat().st_size > 0
+
+
+def test_export_apkg_media_included(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    export_manifest_file(manifest_path, apkg_path)
+
+    with zipfile.ZipFile(apkg_path, "r") as zf:
+        names = zf.namelist()
+        assert "media" in names, f"ZIP entries: {names}"
+
+
+def test_export_apkg_deck_name(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "custom.apkg"
+
+    export_manifest_file(
+        manifest_path,
+        apkg_path,
+        ExportOptions(format="apkg", deck_name="My French Deck"),
+    )
+
+    extract_dir = tmp_path / "extract"
+    extract_dir.mkdir()
+    with zipfile.ZipFile(apkg_path, "r") as zf:
+        zf.extract("collection.anki2", extract_dir)
+
+    conn = sqlite3.connect(extract_dir / "collection.anki2")
+    decks_json = conn.execute("SELECT decks FROM col").fetchone()[0]
+    conn.close()
+
+    assert "My French Deck" in decks_json
+
+
+def test_export_apkg_default_deck_name(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    export_manifest_file(manifest_path, apkg_path)
+
+    extract_dir = tmp_path / "extract"
+    extract_dir.mkdir()
+    with zipfile.ZipFile(apkg_path, "r") as zf:
+        zf.extract("collection.anki2", extract_dir)
+
+    conn = sqlite3.connect(extract_dir / "collection.anki2")
+    decks_json = conn.execute("SELECT decks FROM col").fetchone()[0]
+    conn.close()
+
+    assert "audawispr::fr" in decks_json
+
+
+def test_export_apkg_stable_guid(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    export_manifest_file(manifest_path, apkg_path)
+    with zipfile.ZipFile(apkg_path, "r") as zf:
+        zf.extract("collection.anki2", tmp_path)
+    conn = sqlite3.connect(tmp_path / "collection.anki2")
+    first_count = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+    first_guids = [row[0] for row in conn.execute("SELECT guid FROM notes").fetchall()]
+    conn.close()
+
+    (tmp_path / "collection.anki2").unlink()
+
+    export_manifest_file(manifest_path, apkg_path)
+    with zipfile.ZipFile(apkg_path, "r") as zf:
+        zf.extract("collection.anki2", tmp_path)
+    conn = sqlite3.connect(tmp_path / "collection.anki2")
+    second_count = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+    second_guids = [row[0] for row in conn.execute("SELECT guid FROM notes").fetchall()]
+    conn.close()
+
+    assert first_count == second_count == 2
+    assert first_guids == second_guids
+
+
+def test_export_apkg_missing_snippet_error(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    with pytest.raises(ExportError, match="audio file does not exist"):
+        export_manifest_file(manifest_path, apkg_path)
+
+
+def test_export_apkg_empty_manifest_error(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    for seg in manifest.segments:
+        seg.audio_file = None
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    with pytest.raises(ExportError, match="no segments with audio files to export"):
+        export_manifest_file(manifest_path, apkg_path)
+
+
+def test_export_infer_apkg_from_path(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    # No explicit format — suffix .apkg should infer apkg
+    export_manifest_file(manifest_path, apkg_path)
+
+    assert apkg_path.exists()
+    assert apkg_path.stat().st_size > 0
+
+
+def test_export_csv_still_works(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    output_dir = tmp_path / "anki-csv"
+
+    export_manifest_file(manifest_path, output_dir)
+
+    assert (output_dir / "cards.csv").exists()
+    assert (output_dir / "media" / "0000_seg-0000.mp3").exists()

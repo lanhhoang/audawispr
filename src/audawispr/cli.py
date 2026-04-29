@@ -364,20 +364,27 @@ def export(
         typer.Option(
             "--output",
             "-o",
-            help="Output directory for CSV and media.",
+            help="Output directory for CSV/media, or `.apkg` file path.",
         ),
     ],
     format: Annotated[
         str,
         typer.Option(
             "--format",
-            help="Export format. Epic 1 supports only 'anki-csv'.",
+            help="Export format. Supported: 'anki-csv', 'apkg'.",
         ),
     ] = "anki-csv",
+    deck_name: Annotated[
+        str | None,
+        typer.Option(
+            "--deck-name",
+            help="Deck name for APKG export. Defaults to audawispr::{language}.",
+        ),
+    ] = None,
 ) -> None:
     """Export a clipped manifest to Anki-compatible format."""
     try:
-        options = ExportOptions(format=format)
+        options = ExportOptions(format=format, deck_name=deck_name)
         export_manifest_file(manifest, output, options)
     except ExportError as exc:
         _fail(str(exc))

@@ -411,6 +411,7 @@ def test_export_help_displays_phase_6_options() -> None:
     assert result.exit_code == 0
     assert "--output" in output
     assert "--format" in output
+    assert "--deck-name" in output
 
 
 def test_export_writes_csv(monkeypatch, tmp_path) -> None:
@@ -436,6 +437,60 @@ def test_export_writes_csv(monkeypatch, tmp_path) -> None:
 
     assert result.exit_code == 0
     assert "Wrote export" in result.stdout
+
+
+def test_export_apkg_cli(monkeypatch, tmp_path) -> None:
+    input_path = tmp_path / "clipped.json"
+    input_path.write_text("{}", encoding="utf-8")
+    apkg_path = tmp_path / "deck.apkg"
+
+    def fake_export(manifest_path, output_path_arg, options=None):
+        output_path_arg.parent.mkdir(parents=True, exist_ok=True)
+        output_path_arg.write_bytes(b"fake apkg data")
+
+    monkeypatch.setattr("audawispr.cli.export_manifest_file", fake_export)
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(input_path),
+            "--output",
+            str(apkg_path),
+            "--deck-name",
+            "My Deck",
+            "--format",
+            "apkg",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Wrote export" in result.stdout
+
+
+def test_export_infer_apkg_from_cli(monkeypatch, tmp_path) -> None:
+    input_path = tmp_path / "clipped.json"
+    input_path.write_text("{}", encoding="utf-8")
+    apkg_path = tmp_path / "deck.apkg"
+
+    def fake_export(manifest_path, output_path_arg, options=None):
+        output_path_arg.parent.mkdir(parents=True, exist_ok=True)
+        output_path_arg.write_bytes(b"fake apkg data")
+
+    monkeypatch.setattr("audawispr.cli.export_manifest_file", fake_export)
+
+    # No --format, but output ends in .apkg — should infer apkg
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(input_path),
+            "--output",
+            str(apkg_path),
+        ],
+    )
+
+    assert result.exit_code == 0
 
 
 def test_export_reports_error(monkeypatch, tmp_path) -> None:

@@ -24,7 +24,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 | 4   | [IPA Enrichment + Translation Stubs](phase-4.md)     | ✅ Done    |
 | 5   | [Audio Snippet Clipping](phase-5.md)                 | ✅ Done |
 | 6   | [Importable Anki CSV Export](phase-6.md)             | ✅ Done |
-| 7   | [Native `.apkg` Export](phase-7.md)                  | ⬜ Planned |
+| 7   | [Native `.apkg` Export](phase-7.md)                  | ✅ Done |
 | 8   | [One-Shot CLI + Python Facade](phase-8.md)           | ⬜ Planned |
 
 ## Epic TODO
@@ -35,7 +35,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 - [x] Phase 4: IPA Enrichment + Translation Stubs
 - [x] Phase 5: Audio Snippet Clipping
 - [x] Phase 6: Importable Anki CSV Export
-- [ ] Phase 7: Native `.apkg` Export
+- [x] Phase 7: Native `.apkg` Export
 - [ ] Phase 8: One-Shot CLI + Python Facade
 
 ## Public Interfaces By End Of Epic

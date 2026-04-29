@@ -9,8 +9,8 @@ for turning language-learning audio into Anki-ready study materials.
 
 Phase 4 provides local `faster-whisper` transcription into a validated JSON
 manifest, timestamp-aware segmentation into sentence-like learning units, and
-French IPA enrichment. Audio clipping and Anki export are planned for later
-phases.
+French IPA enrichment. Audio clipping, Anki CSV export, and native `.apkg`
+export are implemented.
 
 ## Requirements
 
@@ -117,6 +117,17 @@ references use Anki's `[sound:...]` syntax.
 Manual import in Anki Desktop: File → Import → select `cards.csv`,
 set "Fields separated by: Comma", and copy the `media/` folder contents
 into your Anki collection.media folder.
+
+Export as a native Anki package (`.apkg`) with embedded audio:
+
+```sh
+uv run audawispr export out/clipped.json --output deck.apkg --deck-name "My French Deck"
+```
+
+When the output path ends in `.apkg`, the `apkg` format is inferred
+automatically. Use `--deck-name` to set the deck name; the default is
+`audawispr::{language}` (e.g. `audawispr::fr`). The resulting `.apkg` file can
+be opened directly in Anki Desktop via File → Import.
 
 ## Development Checks
 
