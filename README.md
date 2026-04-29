@@ -7,10 +7,9 @@ Split audio files into high-quality sentence-based learning materials.
 This repository is implementing Epic 1: a Python CLI and reusable core library
 for turning language-learning audio into Anki-ready study materials.
 
-Phase 4 provides local `faster-whisper` transcription into a validated JSON
-manifest, timestamp-aware segmentation into sentence-like learning units, and
-French IPA enrichment. Audio clipping, Anki CSV export, and native `.apkg`
-export are implemented.
+Epic 1 is complete: local `faster-whisper` transcription, timestamp-aware
+segmentation, French IPA enrichment, audio clipping, Anki CSV export, native
+`.apkg` export, and a one-shot CLI are all implemented.
 
 ## Requirements
 
@@ -26,6 +25,32 @@ Install runtime and development dependencies:
 ```sh
 uv sync --dev
 ```
+
+## Quickstart
+
+Turn an audio file into an Anki deck with one command:
+
+```sh
+uv run audawispr lesson.mp3 --output deck.apkg --language fr --ipa
+```
+
+Or use the Python API:
+
+```python
+from pathlib import Path
+from audawispr.pipeline import Pipeline
+
+Pipeline(
+    output=Path("deck.apkg"),
+    language="fr",
+    ipa=True,
+).run(Path("lesson.mp3"))
+```
+
+The one-shot command runs transcription, segmentation, enrichment, clipping, and
+export in sequence. Intermediate files are stored in a work directory next to the
+output (e.g. `deck/_work/` for `deck.apkg`, or `<output>/_work/` for CSV) and
+cleaned up on success unless `--keep-work` is passed.
 
 ## Usage
 

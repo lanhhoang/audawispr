@@ -15,20 +15,20 @@ directly from an audio file with one command.
 
 ## TODO
 
-- [ ] Add core pipeline request/result types for one-shot execution.
-- [ ] Add progress event, progress hook, and cooperative cancellation token types
+- [x] Add core pipeline request/result types for one-shot execution.
+- [x] Add progress event, progress hook, and cooperative cancellation token types
   suitable for CLI and future app wrappers.
-- [ ] Implement pipeline orchestration over transcribe, segment, enrich, clip,
+- [x] Implement pipeline orchestration over transcribe, segment, enrich, clip,
   and export phases.
-- [ ] Skip the enrich phase when `--ipa` is false and translation is `none`.
-- [ ] Store intermediate manifests and snippets under a work directory for
+- [x] Skip the enrich phase when `--ipa` is false and translation is `none`.
+- [x] Store intermediate manifests and snippets under a work directory for
   reruns and debugging.
-- [ ] Add root Typer callback/command for `audawispr AUDIO --output deck.apkg`.
-- [ ] Add simple `audawispr.pipeline.Pipeline` facade.
-- [ ] Add phase-specific error wrapping with actionable messages.
-- [ ] Add cancellation checks at phase boundaries and supported per-segment loops.
-- [ ] Ensure manifest-based phase commands from earlier phases keep working.
-- [ ] Update README with full quickstart and phase command examples.
+- [x] Add root Typer callback/command for `audawispr AUDIO --output deck.apkg`.
+- [x] Add simple `audawispr.pipeline.Pipeline` facade.
+- [x] Add phase-specific error wrapping with actionable messages.
+- [x] Add cancellation checks at phase boundaries and supported per-segment loops.
+- [x] Ensure manifest-based phase commands from earlier phases keep working.
+- [x] Update README with full quickstart and phase command examples.
 
 ## Defaults
 
@@ -46,23 +46,23 @@ directly from an audio file with one command.
 
 ## Acceptance Checks
 
-- [ ] One-shot CLI tests with mocked transcription.
-- [ ] Python facade tests.
-- [ ] Tests for intermediate output paths.
-- [ ] Tests that enrichment is skipped when no IPA or translation is requested.
-- [ ] Tests that one-shot work directory derivation is correct with Windows-style
+- [x] One-shot CLI tests with mocked transcription.
+- [x] Python facade tests.
+- [x] Tests for intermediate output paths.
+- [x] Tests that enrichment is skipped when no IPA or translation is requested.
+- [x] Tests that one-shot work directory derivation is correct with Windows-style
   and POSIX-style paths.
-- [ ] Tests for phase-specific error messages.
-- [ ] Tests for cooperative cancellation before or between phases.
-- [ ] Regression tests for all phase subcommands.
-- [ ] `uv run pytest`
-- [ ] `uv run ruff check .`
-- [ ] `uv run ruff format --check .`
-- [ ] `uv run ty check src tests`
-- [ ] `uv run audawispr --help`
-- [ ] `uv run audawispr doctor`
-- [ ] CI quality workflow passes.
-- [ ] README documents one-shot CLI and Python facade usage.
+- [x] Tests for phase-specific error messages.
+- [x] Tests for cooperative cancellation before or between phases.
+- [x] Regression tests for all phase subcommands.
+- [x] `uv run pytest`
+- [x] `uv run ruff check .`
+- [x] `uv run ruff format --check .`
+- [x] `uv run ty check src tests`
+- [x] `uv run audawispr --help`
+- [x] `uv run audawispr doctor`
+- [x] CI quality workflow passes.
+- [x] README documents one-shot CLI and Python facade usage.
 
 ## Notes
 
@@ -71,7 +71,15 @@ directly from an audio file with one command.
 
 ## Verification Evidence
 
-- Pending.
+- `uv run pytest`: 123 passed (26 new pipeline tests + 97 existing regression tests)
+- `uv run ruff check .`: clean
+- `uv run ruff format --check .`: clean
+- `uv run ty check src tests`: clean
+- `uv run audawispr --help`: shows callback options and 7 visible subcommands (hidden `_oneshot` not listed)
+- `uv run audawispr doctor`: reports package, Python, FFmpeg, and FFprobe status
+- Deviation: `@app.command(hidden=True, name="_oneshot")` requires explicit `name="_oneshot"` because Typer converts underscores to hyphens in inferred command names.
+- Deviation: `parse_args` inserts `_oneshot` before the first positional argument (not at the start of `args`) so callback options like `--verbose` are still parsed by the callback.
+- Deviation: `PipelineRequest` uses `model_size="small"` and `device="auto"` to match existing `TranscriptionOptions` defaults rather than the "base"/"cpu" shown in the original phase-8.md draft.
 
 ## Actual Implementation
 
