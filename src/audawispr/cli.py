@@ -443,6 +443,13 @@ def _oneshot(
         bool,
         typer.Option("--ipa/--no-ipa"),
     ] = False,
+    translate: Annotated[
+        str,
+        typer.Option(
+            "--translate",
+            help="Translation provider. Epic 1 supports only 'none'.",
+        ),
+    ] = "none",
     model_size: Annotated[
         str,
         typer.Option("--model-size"),
@@ -496,6 +503,7 @@ def _oneshot(
         output=output,
         language=language,
         ipa=ipa,
+        translation_provider=translate,
         model_size=model_size,
         device=device,
         compute_type=compute_type,

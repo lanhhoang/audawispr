@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import html
+import logging
 import os
 import shutil
 import tempfile
@@ -11,6 +13,8 @@ import genanki
 
 from audawispr.core.errors import ExportError
 from audawispr.core.manifest import TranscriptManifest, load_manifest
+
+logger = logging.getLogger(__name__)
 
 DECK_ID = 2059400110
 MODEL_ID = 2059400111
@@ -79,15 +83,15 @@ ANKI_MODEL = genanki.Model(
         {
             "name": "Card 1",
             "qfmt": (
-                '<div class="source-text">{{SourceText}}</div>'
-                '<div class="audio">{{Audio}}</div>'
+                '<div class="source-text">{{hint:SourceText}}</div>'
+                '<div class="audio">{{hint:Audio}}</div>'
             ),
             "afmt": (
                 '{{FrontSide}}<hr id="answer">'
-                '<div class="ipa">{{IPA}}</div>'
-                '<div class="translation">{{Translation}}</div>'
+                '<div class="ipa">{{hint:IPA}}</div>'
+                '<div class="translation">{{hint:Translation}}</div>'
                 '<div class="metadata">'
-                "{{SourceFile}} &middot; {{TimestampRange}}"
+                "{{hint:SourceFile}} &middot; {{hint:TimestampRange}}"
                 "</div>"
             ),
         },
@@ -173,9 +177,9 @@ def _export_csv(
                         sound_ref,
                         _safe_csv_cell(ipa),
                         _safe_csv_cell(translation),
-                        manifest.source_audio.file_name,
+                        _safe_csv_cell(manifest.source_audio.file_name),
                         f"{segment.start:.3f}-{segment.end:.3f}",
-                        segment.id,
+                        _safe_csv_cell(segment.id),
                     ]
                 )
         os.replace(temp_path, csv_path)
@@ -216,18 +220,21 @@ def _export_apkg(
             note = AudawisprNote(
                 model=ANKI_MODEL,
                 fields=[
-                    segment.text,
+                    html.escape(segment.text),
                     sound_ref,
-                    ipa,
-                    translation,
-                    manifest.source_audio.file_name,
+                    html.escape(ipa),
+                    html.escape(translation),
+                    html.escape(manifest.source_audio.file_name),
                     f"{segment.start:.3f}-{segment.end:.3f}",
-                    segment.id,
+                    html.escape(segment.id),
                 ],
             )
             deck.add_note(note)
+        else:
+            logger.warning("Segment %s has no audio file; skipping", segment.id)
 
-    if len(deck.notes) == 0:
+    audio_count = sum(1 for s in manifest.segments if s.audio_file)
+    if audio_count == 0:
         raise ExportError("no segments with audio files to export")
 
     resolved_output = output_path.expanduser()
@@ -242,19 +249,32 @@ def _export_apkg(
 
 
 def _resolve_audio(manifest_path: Path, audio_file: str) -> Path:
-    resolved = (manifest_path.parent / audio_file).resolve()
+    candidate = manifest_path.parent / audio_file
+    if candidate.is_symlink():
+        raise ExportError(f"audio file is a symlink: {candidate}")
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(manifest_path.parent.resolve())
+    except ValueError as exc:
+        raise ExportError(f"audio file escapes manifest directory: {resolved}") from exc
     if not resolved.exists():
         raise ExportError(f"audio file does not exist: {resolved}")
     return resolved
 
 
 def _copy_media(src: Path, dest_dir: Path) -> None:
+    if src.is_symlink():
+        raise ExportError(f"audio file is a symlink: {src}")
     dest = dest_dir / src.name
     shutil.copy2(src, dest)
 
 
 def _safe_csv_cell(value: str) -> str:
     """Neutralize CSV formula injection in spreadsheet apps."""
-    if value and value[0] in "=+-@":
-        return "'" + value
-    return value
+    # Strip \r first — lstrip() does not strip carriage return
+    # (CR can cause CSV row break and formula injection bypass)
+    cleaned = value.replace("\r", "")
+    stripped = cleaned.lstrip()
+    if stripped and stripped[0] in "=+-@":
+        return "'" + cleaned
+    return cleaned

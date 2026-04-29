@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import shutil
+import sys
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -25,6 +28,8 @@ from audawispr.core.export import ExportOptions, export_manifest_file
 from audawispr.core.manifest import save_manifest
 from audawispr.core.segmentation import SegmentationOptions, segment_manifest
 from audawispr.core.transcription import TranscriptionOptions, transcribe_audio
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -88,9 +93,20 @@ def _derive_work_dir(output: Path) -> Path:
     When output is a file (has a suffix like .apkg), work dir is a sibling
     directory next to it. When output is a directory, work dir is nested.
     """
+    # B4: Guard against work dir colliding with an existing directory
+    # that shares the same stem as the output path.
+    # Only applies to file outputs (output has a suffix).
     if output.suffix:
-        return output.with_suffix("") / "_work"
-    return output / "_work"
+        existing = output.with_suffix("")
+        work_dir = existing / "_work"
+        if existing != work_dir and hasattr(existing, "is_dir") and existing.is_dir():
+            raise ValueError(
+                f"Output path {output} collides with existing directory {existing}"
+            )
+    else:
+        work_dir = output / "_work"
+
+    return work_dir
 
 
 def run_pipeline(
@@ -220,5 +236,35 @@ def run_pipeline(
     except CancelledError:
         raise
     finally:
-        if success and not request.keep_work and work_dir.exists():
+        # C1: Explicit cancellation check (belt-and-suspenders)
+        exc_info = sys.exc_info()
+        is_cancelled = exc_info[1] is not None and isinstance(
+            exc_info[1], CancelledError
+        )
+
+        if not is_cancelled and success and not request.keep_work and work_dir.exists():
+            # C2: Symlink safety — manually check all entries including dotfiles
+            # before cleanup. os.scandir catches ALL entries unlike rglob("*")
+            # which skips dot-prefixed files.
+            def _has_symlink(dirpath: Path) -> bool:
+                try:
+                    for entry in os.scandir(str(dirpath)):
+                        if entry.is_symlink():
+                            return True
+                        if entry.is_dir(follow_symlinks=False):
+                            if _has_symlink(Path(entry.path)):
+                                return True
+                except PermissionError:
+                    return True
+                return False
+
+            if _has_symlink(work_dir):
+                logger.warning(
+                    "Work directory contains symlinks, cleaning with care: %s", work_dir
+                )
+
             shutil.rmtree(work_dir, ignore_errors=True)
+
+        # C5: Emit work dir path to stderr on failure
+        if not success and work_dir.exists():
+            sys.stderr.write(f"Work directory preserved at: {work_dir}\n")
