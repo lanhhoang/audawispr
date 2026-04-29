@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import shutil
 import sys
 import threading
@@ -26,6 +28,8 @@ from audawispr.core.export import ExportOptions, export_manifest_file
 from audawispr.core.manifest import save_manifest
 from audawispr.core.segmentation import SegmentationOptions, segment_manifest
 from audawispr.core.transcription import TranscriptionOptions, transcribe_audio
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -89,26 +93,22 @@ def _derive_work_dir(output: Path) -> Path:
     When output is a file (has a suffix like .apkg), work dir is a sibling
     directory next to it. When output is a directory, work dir is nested.
     """
-    if output.suffix:
-        work_dir = output.with_suffix("") / "_work"
-    else:
-        work_dir = output / "_work"
-
     # B4: Guard against work dir colliding with an existing directory
     # that shares the same stem as the output path.
-    # Only applies to file outputs (output has a suffix) and concrete paths
-    # that support filesystem operations.
+    # Only applies to file outputs (output has a suffix).
     if output.suffix:
         existing = output.with_suffix("")
+        work_dir = existing / "_work"
         if (
             existing != work_dir
-            and hasattr(existing, "exists")
-            and existing.exists()
+            and hasattr(existing, "is_dir")
             and existing.is_dir()
         ):
             raise ValueError(
                 f"Output path {output} collides with existing directory {existing}"
             )
+    else:
+        work_dir = output / "_work"
 
     return work_dir
 
@@ -253,18 +253,27 @@ def run_pipeline(
             and not request.keep_work
             and work_dir.exists()
         ):
-            # C2: Symlink safety for Python < 3.12
-            if sys.version_info < (3, 12):
-                for p in work_dir.rglob("*"):
-                    if p.is_symlink():
-                        raise OneShotError(
-                            f"Refusing to clean up symlink in work dir: {p}"
-                        )
+            # C2: Symlink safety — manually check all entries including dotfiles
+            # before cleanup. os.scandir catches ALL entries unlike rglob("*")
+            # which skips dot-prefixed files.
+            def _has_symlink(dirpath: Path) -> bool:
+                try:
+                    for entry in os.scandir(str(dirpath)):
+                        if entry.is_symlink():
+                            return True
+                        if entry.is_dir(follow_symlinks=False):
+                            if _has_symlink(Path(entry.path)):
+                                return True
+                except PermissionError:
+                    return True
+                return False
 
-            kwargs: dict = {}
-            if sys.version_info >= (3, 12):
-                kwargs["follow_symlinks"] = False
-            shutil.rmtree(work_dir, ignore_errors=True, **kwargs)
+            if _has_symlink(work_dir):
+                logger.warning(
+                    "Work directory contains symlinks, cleaning with care: %s", work_dir
+                )
+
+            shutil.rmtree(work_dir, ignore_errors=True)
 
         # C5: Emit work dir path to stderr on failure
         if not success and work_dir.exists():

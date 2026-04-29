@@ -103,7 +103,7 @@ def clip_manifest_file(
                 f"segment {seg.id} has zero or negative duration after padding"
             )
 
-        filename = stable_snippet_filename(idx, seg.id, opts.audio_format)
+        filename = stable_snippet_filename(idx, seg.id, fmt)
         snippet_path = output_dir / filename
 
         # B1: Snippet path containment check

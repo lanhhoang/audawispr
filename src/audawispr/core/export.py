@@ -251,9 +251,10 @@ def _export_apkg(
 
 
 def _resolve_audio(manifest_path: Path, audio_file: str) -> Path:
-    resolved = (manifest_path.parent / audio_file).resolve()
-    if resolved.is_symlink():
-        raise ExportError(f"audio file is a symlink: {resolved}")
+    candidate = manifest_path.parent / audio_file
+    if candidate.is_symlink():
+        raise ExportError(f"audio file is a symlink: {candidate}")
+    resolved = candidate.resolve()
     try:
         resolved.relative_to(manifest_path.parent.resolve())
     except ValueError as exc:
@@ -274,7 +275,10 @@ def _copy_media(src: Path, dest_dir: Path) -> None:
 
 def _safe_csv_cell(value: str) -> str:
     """Neutralize CSV formula injection in spreadsheet apps."""
-    stripped = value.lstrip()
+    # Strip \r first — lstrip() does not strip carriage return
+    # (CR can cause CSV row break and formula injection bypass)
+    cleaned = value.replace("\r", "")
+    stripped = cleaned.lstrip()
     if stripped and stripped[0] in "=+-@":
-        return "'" + value
-    return value
+        return "'" + cleaned
+    return cleaned
