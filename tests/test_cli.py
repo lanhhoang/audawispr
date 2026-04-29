@@ -541,6 +541,24 @@ def test_enrich_rejects_network_translation_without_writing_output(tmp_path) -> 
     assert not output_path.exists()
 
 
+def test_oneshot_translate_does_not_cause_type_error(tmp_path) -> None:
+    """_oneshot accepts --translate without raising TypeError."""
+    result = runner.invoke(
+        app,
+        [
+            "_oneshot",
+            str(tmp_path / "input.mp3"),
+            "--output",
+            str(tmp_path / "out.apkg"),
+            "--translate",
+            "deepl",
+        ],
+    )
+    # The command may fail because the audio file doesn't exist,
+    # but it should not crash with a TypeError.
+    assert not isinstance(result.exception, TypeError)
+
+
 def _make_manifest(
     path: str = "/tmp/lesson.mp3",
     words: list[TranscriptWord] | None = None,

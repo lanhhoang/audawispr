@@ -4,6 +4,7 @@ import pytest
 
 from audawispr.core.clipping import (
     ClipOptions,
+    _compute_audio_file,
     clip_manifest_file,
     safe_segment_id,
     stable_snippet_filename,
@@ -15,6 +16,7 @@ from audawispr.core.manifest import (
     TranscriptManifest,
     TranscriptSegment,
     TranscriptWord,
+    load_manifest,
 )
 
 
@@ -487,3 +489,141 @@ def test_clip_default_options() -> None:
     assert opts.audio_format == "mp3"
     assert opts.bitrate == "128k"
     assert opts.force is False
+
+
+# --- B1: Format sanitization tests ---
+
+
+def test_format_sanitization_rejects_path_traversal(tmp_path: Path) -> None:
+    """audio_format containing path traversal characters is rejected."""
+    source = _make_source_audio(tmp_path)
+    manifest = _make_manifest(path=str(source))
+    manifest_path = _write_manifest(tmp_path, manifest)
+    output_manifest = tmp_path / "clipped.json"
+    output_dir = tmp_path / "media"
+
+    with pytest.raises(ClippingError, match="invalid audio format"):
+        clip_manifest_file(
+            manifest_path,
+            output_manifest,
+            output_dir,
+            ClipOptions(audio_format="../../.bashrc"),
+        )
+
+
+def test_format_sanitization_rejects_invalid_format(tmp_path: Path) -> None:
+    """audio_format not in ALLOWED_FORMATS is rejected."""
+    source = _make_source_audio(tmp_path)
+    manifest = _make_manifest(path=str(source))
+    manifest_path = _write_manifest(tmp_path, manifest)
+    output_manifest = tmp_path / "clipped.json"
+    output_dir = tmp_path / "media"
+
+    with pytest.raises(ClippingError, match="invalid audio format"):
+        clip_manifest_file(
+            manifest_path,
+            output_manifest,
+            output_dir,
+            ClipOptions(audio_format="exe"),
+        )
+
+
+# --- B2: Source audio path hardening tests ---
+
+
+def test_source_audio_rejects_symlink(tmp_path: Path) -> None:
+    """source_audio.path that is a symlink is rejected."""
+    real_file = tmp_path / "real.mp3"
+    real_file.write_bytes(b"data")
+    link = tmp_path / "link.mp3"
+    link.symlink_to(real_file)
+
+    manifest = _make_manifest(path=str(link))
+    manifest_path = _write_manifest(tmp_path, manifest)
+    output_manifest = tmp_path / "clipped.json"
+
+    with pytest.raises(ClippingError, match="symlink"):
+        clip_manifest_file(manifest_path, output_manifest, tmp_path / "media")
+
+
+# --- B3: _compute_audio_file fallback test ---
+
+
+def test_compute_audio_file_fallback_on_valueerror(tmp_path: Path) -> None:
+    """_compute_audio_file falls back to os.path.relpath when relative_to fails."""
+    output_manifest = tmp_path / "a" / "manifest.json"
+    output_manifest.parent.mkdir(parents=True)
+    output_dir = tmp_path / "b"
+    output_dir.mkdir()
+    filename = "test.mp3"
+
+    result = _compute_audio_file(output_manifest, output_dir, filename)
+
+    assert isinstance(result, str)
+    assert result.endswith(filename)
+    # output_dir and output_manifest.parent are siblings,
+    # so the relative path should contain "../"
+    assert "../" in result
+
+
+# --- C4: Incremental manifest save test ---
+
+
+def test_clip_incremental_manifest_save(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Manifest is saved incrementally after each successful clip."""
+    source = _make_source_audio(tmp_path)
+    manifest = _make_manifest(path=str(source))
+    manifest_path = _write_manifest(tmp_path, manifest)
+    output_manifest = tmp_path / "clipped.json"
+    output_dir = tmp_path / "media"
+    output_dir.mkdir()
+
+    from audawispr.core.diagnostics import ToolStatus
+
+    monkeypatch.setattr(
+        "audawispr.core.clipping.find_media_tool",
+        lambda name, env_var, **kw: ToolStatus(
+            name="ffmpeg",
+            available=True,
+            source="PATH",
+            path="/usr/bin/fake-ffmpeg",
+        ),
+    )
+
+    call_count: int = 0
+
+    def fake_run(args: list[str], *a: object, **kw: object) -> object:
+        nonlocal call_count
+        call_count += 1
+        snippet = Path(args[-1])
+        snippet.parent.mkdir(parents=True, exist_ok=True)
+
+        class FakeResult:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        if call_count == 1:
+            # First segment succeeds
+            snippet.write_bytes(b"data")
+            return FakeResult()
+        else:
+            # Second segment produces empty snippet -> will raise
+            snippet.write_bytes(b"")
+            return FakeResult()
+
+    monkeypatch.setattr("audawispr.core.clipping.subprocess.run", fake_run)
+
+    with pytest.raises(ClippingError, match="empty snippet"):
+        clip_manifest_file(manifest_path, output_manifest, output_dir)
+
+    # Manifest should have been saved after first segment (incremental)
+    assert output_manifest.exists()
+    saved = load_manifest(output_manifest)
+    # First segment should have audio_file set
+    assert saved.segments[0].audio_file is not None
+    assert saved.segments[0].audio_file != ""
+    # Second segment was not processed successfully, audio_file should be None
+    assert saved.segments[1].audio_file is None

@@ -1,11 +1,20 @@
+import json
+import logging
 import sqlite3
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from audawispr.core.errors import ExportError
-from audawispr.core.export import ExportOptions, export_manifest_file
+from audawispr.core.export import (
+    ExportOptions,
+    _copy_media,
+    _resolve_audio,
+    _safe_csv_cell,
+    export_manifest_file,
+)
 from audawispr.core.manifest import (
     SourceAudio,
     TranscriptionSettings,
@@ -448,3 +457,147 @@ def test_export_csv_still_works(tmp_path: Path) -> None:
 
     assert (output_dir / "cards.csv").exists()
     assert (output_dir / "media" / "0000_seg-0000.mp3").exists()
+
+
+# --- Security: CSV formula injection (A1, A2) ---
+
+
+def test_safe_csv_cell_whitespace_bypass() -> None:
+    """Leading whitespace should not bypass formula-injection protection."""
+    assert _safe_csv_cell("  =2+2") == "'  =2+2"
+    assert _safe_csv_cell("\t=CMD") == "'\t=CMD"
+    # Whitespace-only strings should be returned unchanged
+    assert _safe_csv_cell("   ") == "   "
+    assert _safe_csv_cell("") == ""
+
+
+def test_csv_cell_sanitizes_segment_id_and_file_name(tmp_path: Path) -> None:
+    """CSV output should sanitize manifest.source_audio.file_name and segment.id."""
+    manifest = _make_clipped_manifest(tmp_path)
+    manifest.segments[0].id = "=HYPERLINK(...)"
+    manifest.source_audio.file_name = "+EVIL()"
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    output_dir = tmp_path / "anki-csv"
+
+    export_manifest_file(manifest_path, output_dir)
+
+    csv_path = output_dir / "cards.csv"
+    content = csv_path.read_text(encoding="utf-8")
+
+    # SourceFile column should be sanitized
+    assert "'+EVIL()" in content
+    # SegmentId column should be sanitized
+    assert "'=HYPERLINK(" in content
+
+
+# --- Security: symlink and path-traversal rejection (A3) ---
+
+
+def test_resolve_audio_rejects_symlink(tmp_path: Path) -> None:
+    """_resolve_audio must reject paths that appear to be symlinks."""
+    manifest_path = tmp_path / "manifest.json"
+    audio_file = tmp_path / "audio.mp3"
+    audio_file.write_bytes(b"data")
+
+    with patch.object(Path, "is_symlink", return_value=True):
+        with pytest.raises(ExportError, match="audio file is a symlink"):
+            _resolve_audio(manifest_path, "audio.mp3")
+
+
+def test_resolve_audio_rejects_path_traversal(tmp_path: Path) -> None:
+    """_resolve_audio must reject paths that escape the manifest directory."""
+    outside = tmp_path / "outside.mp3"
+    outside.write_bytes(b"data")
+
+    manifest_dir = tmp_path / "manifest_dir"
+    manifest_dir.mkdir()
+    manifest_path = manifest_dir / "manifest.json"
+
+    with pytest.raises(ExportError, match="audio file escapes manifest directory"):
+        _resolve_audio(manifest_path, "../outside.mp3")
+
+
+def test_copy_media_rejects_symlink(tmp_path: Path) -> None:
+    """_copy_media must reject symlink sources."""
+    src = tmp_path / "audio.mp3"
+    src.write_bytes(b"data")
+
+    with patch.object(Path, "is_symlink", return_value=True):
+        with pytest.raises(ExportError, match="audio file is a symlink"):
+            _copy_media(src, tmp_path)
+
+
+# --- Security: XSS defense in APKG (A4) ---
+
+
+def test_ankicard_html_escaped(tmp_path: Path) -> None:
+    """APKG note fields should have HTML-special characters escaped."""
+    manifest = _make_clipped_manifest(tmp_path)
+    manifest.segments[0].text = "<script>alert('xss')</script>"
+    manifest.segments[0].ipa = "<b>ipa</b>"
+    manifest.segments[0].translation = "a & b"
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    export_manifest_file(manifest_path, apkg_path)
+
+    extract_dir = tmp_path / "extract"
+    extract_dir.mkdir()
+    with zipfile.ZipFile(apkg_path, "r") as zf:
+        zf.extract("collection.anki2", extract_dir)
+
+    conn = sqlite3.connect(extract_dir / "collection.anki2")
+    notes = conn.execute("SELECT flds FROM notes").fetchall()
+    conn.close()
+
+    for (flds,) in notes:
+        if "&lt;script&gt;" in flds:
+            assert "&lt;b&gt;ipa&lt;/b&gt;" in flds
+            assert "a &amp; b" in flds
+            break
+    else:
+        pytest.fail("No note with HTML-escaped content found")
+
+
+# --- Security: media files are basenames in APKG (A5) ---
+
+
+def test_media_files_basename_only(tmp_path: Path) -> None:
+    """APKG media JSON should contain only basenames, never full paths."""
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    export_manifest_file(manifest_path, apkg_path)
+
+    with zipfile.ZipFile(apkg_path, "r") as zf:
+        media_json = json.loads(zf.read("media").decode("utf-8"))
+
+    for idx, filename in media_json.items():
+        assert "/" not in filename, (
+            f"media file {idx} contains path separator: {filename!r}"
+        )
+
+
+# --- Per-segment warning for missing audio (A6) ---
+
+
+def test_apkg_export_warns_missing_audio(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """APKG export should warn about segments that have no audio_file."""
+    manifest = _make_clipped_manifest(tmp_path)
+    manifest.segments[1].audio_file = None
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    with caplog.at_level(logging.WARNING):
+        export_manifest_file(manifest_path, apkg_path)
+
+    assert apkg_path.exists()
+    assert "has no audio file" in caplog.text
+    assert "seg-0001" in caplog.text

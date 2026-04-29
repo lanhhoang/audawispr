@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -89,8 +90,27 @@ def _derive_work_dir(output: Path) -> Path:
     directory next to it. When output is a directory, work dir is nested.
     """
     if output.suffix:
-        return output.with_suffix("") / "_work"
-    return output / "_work"
+        work_dir = output.with_suffix("") / "_work"
+    else:
+        work_dir = output / "_work"
+
+    # B4: Guard against work dir colliding with an existing directory
+    # that shares the same stem as the output path.
+    # Only applies to file outputs (output has a suffix) and concrete paths
+    # that support filesystem operations.
+    if output.suffix:
+        existing = output.with_suffix("")
+        if (
+            existing != work_dir
+            and hasattr(existing, "exists")
+            and existing.exists()
+            and existing.is_dir()
+        ):
+            raise ValueError(
+                f"Output path {output} collides with existing directory {existing}"
+            )
+
+    return work_dir
 
 
 def run_pipeline(
@@ -220,5 +240,32 @@ def run_pipeline(
     except CancelledError:
         raise
     finally:
-        if success and not request.keep_work and work_dir.exists():
-            shutil.rmtree(work_dir, ignore_errors=True)
+        # C1: Explicit cancellation check (belt-and-suspenders)
+        exc_info = sys.exc_info()
+        is_cancelled = (
+            exc_info[1] is not None
+            and isinstance(exc_info[1], CancelledError)
+        )
+
+        if (
+            not is_cancelled
+            and success
+            and not request.keep_work
+            and work_dir.exists()
+        ):
+            # C2: Symlink safety for Python < 3.12
+            if sys.version_info < (3, 12):
+                for p in work_dir.rglob("*"):
+                    if p.is_symlink():
+                        raise OneShotError(
+                            f"Refusing to clean up symlink in work dir: {p}"
+                        )
+
+            kwargs: dict = {}
+            if sys.version_info >= (3, 12):
+                kwargs["follow_symlinks"] = False
+            shutil.rmtree(work_dir, ignore_errors=True, **kwargs)
+
+        # C5: Emit work dir path to stderr on failure
+        if not success and work_dir.exists():
+            sys.stderr.write(f"Work directory preserved at: {work_dir}\n")

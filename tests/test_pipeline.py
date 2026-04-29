@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import sys
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from unittest.mock import MagicMock
 
@@ -124,6 +126,23 @@ def test_derive_work_dir_windows() -> None:
     assert _derive_work_dir(PureWindowsPath("output", "deck.apkg")) == PureWindowsPath(  # type: ignore
         "output", "deck", "_work"
     )
+
+
+def test_derive_work_dir_collision(tmp_path: Path) -> None:
+    """_derive_work_dir raises ValueError when output stem is an existing directory."""
+    stem_dir = tmp_path / "deck"
+    stem_dir.mkdir()
+    output = tmp_path / "deck.apkg"
+    with pytest.raises(ValueError, match="collides with existing directory"):
+        _derive_work_dir(output)
+
+
+def test_derive_work_dir_no_collision_on_dir_output(tmp_path: Path) -> None:
+    """_derive_work_dir does NOT raise when output is itself a directory (no suffix)."""
+    output = tmp_path / "anki-csv"
+    output.mkdir()
+    work_dir = _derive_work_dir(output)
+    assert work_dir == output / "_work"
 
 
 # --- Pipeline run tests ---
@@ -297,6 +316,37 @@ def test_pipeline_cancellation_stops_before_export(monkeypatch, tmp_path: Path) 
     assert not apkg_path.exists()
 
 
+def test_work_dir_preserved_on_cancellation(monkeypatch, tmp_path: Path) -> None:
+    """Work directory is not deleted when pipeline is cancelled."""
+    audio_path = tmp_path / "lesson.mp3"
+    audio_path.write_bytes(b"abc")
+    apkg_path = tmp_path / "deck.apkg"
+
+    monkeypatch.setattr(
+        "audawispr.core.pipeline.transcribe_audio",
+        lambda *a, **k: _make_manifest(path=str(audio_path.resolve())),
+    )
+    monkeypatch.setattr(
+        "audawispr.core.pipeline.segment_manifest",
+        lambda m, o: m,
+    )
+
+    token = CancellationToken()
+
+    def hook(event: ProgressEvent) -> None:
+        if event.phase == "segment":
+            token.request_cancel()
+
+    work_dir = _derive_work_dir(apkg_path)
+    request = PipelineRequest(audio=audio_path, output=apkg_path)
+
+    with pytest.raises(CancelledError):
+        run_pipeline(request, progress_hook=hook, cancellation_token=token)
+
+    # Work dir should still exist because cleanup is skipped on cancellation
+    assert work_dir.exists()
+
+
 # --- Error wrapping ---
 
 
@@ -444,6 +494,63 @@ def test_pipeline_export_error_wrap(monkeypatch, tmp_path: Path) -> None:
         run_pipeline(request)
 
     assert "disk space" in str(exc_info.value)
+
+
+def test_pipeline_failure_emits_work_dir_stderr(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    """Failed pipeline writes work directory path to stderr."""
+    audio_path = tmp_path / "lesson.mp3"
+    audio_path.write_bytes(b"abc")
+    apkg_path = tmp_path / "deck.apkg"
+
+    monkeypatch.setattr(
+        "audawispr.core.pipeline.transcribe_audio",
+        lambda *a, **k: _make_manifest(path=str(audio_path.resolve())),
+    )
+    monkeypatch.setattr(
+        "audawispr.core.pipeline.segment_manifest",
+        lambda m, o: m,
+    )
+
+    def fake(*a, **k):
+        raise ClippingError("ffmpeg missing")
+
+    monkeypatch.setattr("audawispr.core.pipeline.clip_manifest_file", fake)
+
+    request = PipelineRequest(audio=audio_path, output=apkg_path)
+
+    with pytest.raises(OneShotError):
+        run_pipeline(request)
+
+    stderr = capsys.readouterr().err
+    assert "Work directory preserved at:" in stderr
+
+
+def test_rmtree_follow_symlinks_false(monkeypatch, tmp_path: Path) -> None:
+    """shutil.rmtree is called with follow_symlinks=False on Python >= 3.12."""
+    audio_path = tmp_path / "lesson.mp3"
+    audio_path.write_bytes(b"abc")
+    apkg_path = tmp_path / "deck.apkg"
+
+    monkeypatch.setattr(
+        "audawispr.core.pipeline.transcribe_audio",
+        lambda *a, **k: _make_manifest(path=str(audio_path.resolve())),
+    )
+    monkeypatch.setattr(
+        "audawispr.core.pipeline.clip_manifest_file",
+        _fake_clip_manifest_file,
+    )
+
+    rmtree_mock = MagicMock(wraps=shutil.rmtree)
+    monkeypatch.setattr("audawispr.core.pipeline.shutil.rmtree", rmtree_mock)
+
+    request = PipelineRequest(audio=audio_path, output=apkg_path)
+    run_pipeline(request)
+
+    assert rmtree_mock.call_count >= 1
+    if sys.version_info >= (3, 12):
+        assert rmtree_mock.call_args.kwargs.get("follow_symlinks") is False
 
 
 # --- Python facade tests ---

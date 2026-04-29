@@ -9,6 +9,8 @@ from audawispr.core.diagnostics import FFMPEG_ENV, find_media_tool
 from audawispr.core.errors import ClippingError
 from audawispr.core.manifest import TranscriptManifest, load_manifest, save_manifest
 
+ALLOWED_FORMATS = {"mp3", "wav", "ogg", "flac", "m4a"}
+
 
 @dataclass(frozen=True)
 class ClipOptions:
@@ -32,7 +34,10 @@ def stable_snippet_filename(index: int, segment_id: str, extension: str) -> str:
 
 
 def _compute_audio_file(output_manifest: Path, output_dir: Path, filename: str) -> str:
-    rel_dir = Path(os.path.relpath(output_dir, output_manifest.parent))
+    try:
+        rel_dir = output_dir.resolve().relative_to(output_manifest.parent.resolve())
+    except ValueError:
+        rel_dir = Path(os.path.relpath(output_dir, output_manifest.parent))
     audio_path = rel_dir / filename
     return audio_path.as_posix()
 
@@ -44,9 +49,33 @@ def clip_manifest_file(
     options: ClipOptions | None = None,
 ) -> TranscriptManifest:
     opts = options or ClipOptions()
+
+    # B1: Format sanitization with allowlist
+    fmt = opts.audio_format.strip("/\\\0")
+    if fmt not in ALLOWED_FORMATS:
+        raise ClippingError(
+            f"invalid audio format: {opts.audio_format!r} "
+            f"(allowed: {', '.join(sorted(ALLOWED_FORMATS))})"
+        )
+
     manifest = load_manifest(input_manifest)
 
     source_path = Path(manifest.source_audio.path)
+
+    # B2: Reject symlinks
+    if source_path.is_symlink():
+        raise ClippingError(
+            f"source audio is a symlink, refusing to process: {source_path}"
+        )
+
+    # B2: Scope check — source audio must be within the manifest's directory tree
+    try:
+        source_path.resolve().relative_to(input_manifest.resolve().parent)
+    except ValueError:
+        raise ClippingError(
+            f"source audio is outside the manifest directory: {source_path}"
+        ) from None
+
     if not source_path.exists():
         raise ClippingError(f"source audio does not exist: {source_path}")
 
@@ -77,7 +106,20 @@ def clip_manifest_file(
         filename = stable_snippet_filename(idx, seg.id, opts.audio_format)
         snippet_path = output_dir / filename
 
+        # B1: Snippet path containment check
+        try:
+            snippet_path.resolve().relative_to(output_dir.resolve())
+        except ValueError:
+            raise ClippingError(
+                f"snippet path escapes output directory: {snippet_path}"
+            ) from None
+
         if not opts.force and snippet_path.exists() and snippet_path.stat().st_size > 0:
+            # C4: Incremental save for skipped segment
+            audio_file = _compute_audio_file(output_manifest, output_dir, filename)
+            seg = seg.model_copy(update={"audio_file": audio_file})
+            manifest.segments[idx] = seg
+            save_manifest(manifest, output_manifest)
             continue
 
         try:
@@ -112,12 +154,10 @@ def clip_manifest_file(
         if not snippet_path.exists() or snippet_path.stat().st_size == 0:
             raise ClippingError(f"FFmpeg produced empty snippet for segment {seg.id}")
 
-    new_segments = []
-    for idx, seg in enumerate(manifest.segments):
-        filename = stable_snippet_filename(idx, seg.id, opts.audio_format)
+        # C4: Incremental save after successful clip
         audio_file = _compute_audio_file(output_manifest, output_dir, filename)
-        new_segments.append(seg.model_copy(update={"audio_file": audio_file}))
+        seg = seg.model_copy(update={"audio_file": audio_file})
+        manifest.segments[idx] = seg
+        save_manifest(manifest, output_manifest)
 
-    result_manifest = manifest.model_copy(update={"segments": new_segments})
-    save_manifest(result_manifest, output_manifest)
     return load_manifest(output_manifest)
