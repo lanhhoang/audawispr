@@ -161,3 +161,43 @@ No dependencies — all items are fully independent and parallel-executable with
 - Add bitrate `128K` (uppercase) acceptance test
 - Add bitrate `0` rejection test
 - Add `work_dir` symlink rejection test to pipeline tests
+
+## Final Review Findings (Round 2)
+
+Identified by code-reviewer, security-auditor, and security-attacker after
+all G1–G6 and RH1–RH3 fixes were applied.
+
+### Unresolved (need fixing)
+
+| Sev | Issue | File | Details |
+|-----|-------|------|---------|
+| CRITICAL | `\u2061`–`\u2064` bypass `_safe_csv_cell` filter | `export.py` | 4 Cf-category chars not in the character class; formula injection still works |
+| HIGH | `rglob("*")` misses dotfiles in `_remove_symlinks` | `pipeline.py` | `rglob("*")` doesn't match dot-prefixed entries (`.cache`, `.hidden_link`) — regression from original `os.scandir` approach |
+| MAJOR | `0k`/`0M` bitrate not rejected | `clipping.py` | Zero-check only in bare-integer branch; `int("0k"[:-1]) = 0` passes `> 320` check |
+| MAJOR | `%` spacing contradicts decision log | `segmentation.py` | Decision log says "preserve for French" but `%` is in `_SPACE_BEFORE_ALWAYS` (all languages) |
+| MOD | `_read_duration_seconds` lacks `-nostdin` | `audio.py` | `-nostdin` added in `clipping.py` and `diagnostics.py` but not in `audio.py`'s ffprobe call |
+
+### Deferred / Informational
+
+| Sev | Issue | Notes |
+|-----|-------|-------|
+| LOW | Soft hyphen `\u00ad` bypass in CSV filter | `'` prefix still blocks execution in output; completeness hardening only |
+| LOW-MED | ReDoS potential in zero-width regex | Requires extremely long crafted input to trigger backtracking |
+| MINOR | CSV writes rows for segments with no audio | Asymmetry with APKG export; pre-existing behavior |
+| NIT | `hasattr(existing, "is_dir")` dead code in `_derive_work_dir` | Harmless; pre-existing |
+| NIT | Missing test coverage (3 items) | Zero-byte audio, bitrate `128K`, work_dir symlink tests |
+
+### Recommended Priority
+
+1. Fix CRITICAL — Cf-category chars in `_safe_csv_cell`
+2. Fix HIGH — dotfiles missed by `rglob("*")` in `_remove_symlinks`
+3. Fix MAJOR x2 — `0k` bitrate rejection, `%` spacing for French
+4. Fix MOD — `-nostdin` in `audio.py` ffprobe call
+5. Fill test gaps; defer the rest to follow-up
+
+### Verification Status
+
+- **143/143 tests pass**, lint clean, format clean, typecheck clean
+- All G1–G6 acceptance criteria implemented
+- 9/9 Round 1 findings (H1–H9) code-complete in production
+- Round 2 found 5 remaining issues (1 critical, 1 high, 2 major, 1 moderate)
