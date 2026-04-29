@@ -288,12 +288,10 @@ def _copy_media(src: Path, dest_dir: Path) -> None:
 
 def _safe_csv_cell(value: str) -> str:
     """Neutralize CSV formula injection in spreadsheet apps."""
-    # Strip \r first — lstrip() does not strip carriage return
-    # (CR can cause CSV row break and formula injection bypass)
+    # Strip \r first — CR can cause CSV row break and formula injection bypass.
+    # Use re.sub() for explicit control over stripped characters.
     cleaned = value.replace("\r", "")
-    # Use re.sub for Unicode-aware stripping; Python 3.11 str.lstrip()
-    # only strips ASCII whitespace (\u00a0=2+2 would bypass)
-    stripped = re.sub(r"^\s+", "", cleaned)
+    stripped = re.sub(r"^[\s\u200b\u200c\u200d\u2060\ufeff\u180e]+", "", cleaned)
     if stripped and stripped[0] in "=+-@":
         return "'" + cleaned
     return cleaned

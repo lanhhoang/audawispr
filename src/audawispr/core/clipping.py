@@ -87,9 +87,23 @@ def clip_manifest_file(
         )
     ffmpeg_path = ffmpeg.path
 
-    _BITRATE_RE = re.compile(r"^\d+[kM]?$")
+    _BITRATE_RE = re.compile(r"^\d+[kKmM]?$")
     if not _BITRATE_RE.match(opts.bitrate):
         raise ClippingError(f"Invalid bitrate: {opts.bitrate!r}")
+
+    # Range check — prevent DoS via extreme bitrate values
+    if opts.bitrate[-1:] in "kK":
+        value = int(opts.bitrate[:-1])
+        if value > 320:
+            raise ClippingError(f"Bitrate {opts.bitrate} exceeds maximum 320k")
+    elif opts.bitrate[-1:] in "mM":
+        value = int(opts.bitrate[:-1])
+        if value > 10:
+            raise ClippingError(f"Bitrate {opts.bitrate} exceeds maximum 10M")
+    else:
+        value = int(opts.bitrate)
+        if value == 0:
+            raise ClippingError("Bitrate must be greater than 0")
 
     output_dir.mkdir(parents=True, exist_ok=True)
 

@@ -110,16 +110,38 @@ def _derive_work_dir(output: Path) -> Path:
 
 
 _MIN_FREE_SPACE = 500 * 1024 * 1024  # 500 MB
+_WHISPER_CACHE_HINT = (
+    Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "whisper"
+)
 
 
 def _check_disk_space(work_dir: Path) -> None:
-    """Raise OneShotError if disk space on work_dir volume is too low."""
-    usage = shutil.disk_usage(work_dir)
-    if usage.free < _MIN_FREE_SPACE:
-        raise OneShotError(
-            f"Only {usage.free / (1024**3):.1f} GiB free on {work_dir}, "
-            f"need at least {_MIN_FREE_SPACE / (1024**3):.1f} GiB"
-        )
+    """Raise OneShotError if disk space on relevant volumes is too low."""
+    # Check work-dir volume
+    try:
+        usage = shutil.disk_usage(work_dir)
+    except OSError:
+        pass
+    else:
+        if usage.free < _MIN_FREE_SPACE:
+            raise OneShotError(
+                f"Only {usage.free / (1024**3):.1f} GiB free on {work_dir}, "
+                f"need at least {_MIN_FREE_SPACE / (1024**3):.1f} GiB"
+            )
+    # Check Whisper cache volume (first-run download is ~2 GB)
+    try:
+        cache_usage = shutil.disk_usage(_WHISPER_CACHE_HINT.parent)
+    except OSError:
+        pass
+    else:
+        if cache_usage.free < 3 * 1024**3:
+            # Soft warning — cache may already be populated
+            logger.warning(
+                "Only %.1f GiB free on cache volume (%s); "
+                "Whisper model download may fail if not already cached",
+                cache_usage.free / (1024**3),
+                _WHISPER_CACHE_HINT.parent,
+            )
 
 
 def run_pipeline(
@@ -135,6 +157,10 @@ def run_pipeline(
     work_dir = _derive_work_dir(request.output)
     work_dir.mkdir(parents=True, exist_ok=True)
     _check_disk_space(work_dir)
+    if work_dir.is_symlink():
+        raise OneShotError(
+            f"Work directory is a symlink, refusing to continue: {work_dir}"
+        )
 
     def _emit(phase: str, message: str) -> None:
         if progress_hook is not None:
@@ -282,27 +308,17 @@ def run_pipeline(
         )
 
         if not is_cancelled and success and not request.keep_work and work_dir.exists():
-            # C2: Symlink safety — manually unlink all symlinks including dotfiles
-            # before cleanup. os.scandir catches ALL entries unlike rglob("*")
-            # which skips dot-prefixed files.
+            # C2: Symlink safety — recursively unlink all symlinks at every
+            # depth before cleanup, preventing shutil.rmtree from following them.
             def _remove_symlinks(path: Path) -> int:
                 count = 0
-                try:
-                    for entry in os.scandir(str(path)):
+                for entry in path.rglob("*"):
+                    try:
                         if entry.is_symlink():
-                            try:
-                                if entry.is_dir(follow_symlinks=False):
-                                    os.rmdir(entry.path)
-                                else:
-                                    os.unlink(entry.path)
-                            except OSError:
-                                logger.warning(
-                                    "Could not remove symlink: %s", entry.path
-                                )
-                                continue
+                            entry.unlink()
                             count += 1
-                except OSError:
-                    pass
+                    except OSError:
+                        pass
                 return count
 
             linked = _remove_symlinks(work_dir)

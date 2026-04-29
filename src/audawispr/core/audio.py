@@ -24,6 +24,9 @@ def collect_source_audio_metadata(path: Path, language: str) -> SourceAudio:
             f"(max {MAX_AUDIO_SIZE / (1024**3):.0f} GiB)"
         )
 
+    if size_bytes == 0:
+        raise InputAudioError("audio file is empty")
+
     return SourceAudio(
         file_name=resolved_path.name,
         path=str(resolved_path),

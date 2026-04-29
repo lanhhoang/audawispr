@@ -473,6 +473,9 @@ def test_safe_csv_cell_whitespace_bypass() -> None:
     assert _safe_csv_cell("\r=CMD") == "'=CMD"
     # Unicode whitespace bypass (F1): \u00a0 (non-breaking space) stripped
     assert _safe_csv_cell("\u00a0=2+2") == "'\u00a0=2+2"
+    # Zero-width Unicode characters must not bypass (Cf category)
+    assert _safe_csv_cell("\u200b=2+2") == "'\u200b=2+2"
+    assert _safe_csv_cell("\u200b\u200d=CMD") == "'\u200b\u200d=CMD"
 
 
 def test_csv_cell_sanitizes_segment_id_and_file_name(tmp_path: Path) -> None:
