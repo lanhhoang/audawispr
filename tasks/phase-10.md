@@ -88,3 +88,33 @@ files before v0.1.0 release.
   `_status_for_path`, and any other `subprocess.run` calls to ffprobe/ffmpeg.
 - F1–F5 are Phase 9 residual findings — medium/low severity issues that were identified during the Phase 9 code review but are not show-stoppers for v0.1.0. They should be fixed before any feature that accepts arbitrary user-provided text into CSV cells.
 - F1 (Unicode CSV bypass) becomes more important if custom translations or user-supplied segment IDs are added.
+
+## Actual Implementation
+
+### Execution Groups (by complexity, ascending)
+
+| Group | Tier | Items | Description |
+|-------|------|-------|-------------|
+| G1 | Trivial | E5, E7, E8, E6 | Docs/imports — `from __future__ import annotations`, docstrings, narrow exception |
+| G2 | Simple | E1, E9, D2, E2, E3 | 1–8 line additions — `-nostdin` flags, SHA-256 validator, bitrate regex, MAX_AUDIO_SIZE |
+| G3 | Small logic | F1, E4 | Unicode-safe `lstrip` in `_safe_csv_cell`, disk-space pre-flight |
+| G4 | Medium logic | D3, D4, F4 | Per-segment audio warnings, split ManifestError hints, manual symlink unlink |
+| G5 | Tests | F2, F3, F5 | Regression test for `\r` bypass, Unicode whitespace test, rewrite symlink test |
+| G6 | Complex | D1 | Language-aware `SPACE_BEFORE_RE` — plumb `language` through call chain |
+| Verify | Gate | pytest, ruff, ty check | Full test suite, lint, format check, typecheck |
+
+### Dependencies
+
+- F2, F3 depend on F1 (G3 → G5)
+- F5 depends on F4 (G4 → G5)
+- All other items are independent within their group
+
+### Execution Order
+
+G1 → G2 → G3 → G4 → G5 → G6 → Verify
+
+### Decision Log
+
+1. **E4 disk_usage threshold**: 500 MB minimum free space (configurable constant)
+2. **D3 skip vs abort**: `_resolve_audio` file-not-found becomes warning + skip per-segment; bulk `audio_count == 0` error still fires if ALL segments missing
+3. **D1 `%` character for French**: Space before `%` preserved for French (correct typography); not explicitly required by spec but consistent with French spacing rules
