@@ -29,6 +29,7 @@ class Pipeline:
         pause_split_ms: int = 700,
         min_duration_ms: int = 600,
         max_duration_ms: int = 7000,
+        translation_provider: str = "none",
         deck_name: str | None = None,
         keep_work: bool = False,
     ) -> None:
@@ -42,6 +43,7 @@ class Pipeline:
         self._pause_split_ms = pause_split_ms
         self._min_duration_ms = min_duration_ms
         self._max_duration_ms = max_duration_ms
+        self._translation_provider = translation_provider
         self._deck_name = deck_name
         self._keep_work = keep_work
 
@@ -65,6 +67,7 @@ class Pipeline:
             pause_split_ms=self._pause_split_ms,
             min_duration_ms=self._min_duration_ms,
             max_duration_ms=self._max_duration_ms,
+            translation_provider=self._translation_provider,
             deck_name=self._deck_name,
             keep_work=self._keep_work,
         )

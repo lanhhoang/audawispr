@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -41,15 +42,15 @@ class CancellationToken:
     """Cooperative cancellation checked between phases."""
 
     def __init__(self) -> None:
-        self._cancelled = False
+        self._event = threading.Event()
 
     def request_cancel(self) -> None:
         """Request cancellation of the pipeline run."""
-        self._cancelled = True
+        self._event.set()
 
     def check(self) -> None:
         """Raise CancelledError if cancellation was requested."""
-        if self._cancelled:
+        if self._event.is_set():
             raise CancelledError("pipeline run was cancelled")
 
 
@@ -79,12 +80,15 @@ class PipelineResult:
 
     output_path: Path
     work_dir: Path
-    cancelled: bool = False
 
 
 def _derive_work_dir(output: Path) -> Path:
-    """Derive the work directory from the output path."""
-    if output.suffix == ".apkg":
+    """Derive the work directory from the output path.
+
+    When output is a file (has a suffix like .apkg), work dir is a sibling
+    directory next to it. When output is a directory, work dir is nested.
+    """
+    if output.suffix:
         return output.with_suffix("") / "_work"
     return output / "_work"
 
@@ -214,8 +218,6 @@ def run_pipeline(
             work_dir=work_dir,
         )
     except CancelledError:
-        raise
-    except OneShotError:
         raise
     finally:
         if success and not request.keep_work and work_dir.exists():

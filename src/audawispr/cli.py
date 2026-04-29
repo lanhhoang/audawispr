@@ -27,14 +27,10 @@ _VERBOSE = False
 class _OneShotFallbackGroup(typer.core.TyperGroup):
     """Redirect unknown positional args to the hidden _oneshot command."""
 
-    def parse_args(self, ctx, args: list[str]) -> list[str]:
-        known = set(self.list_commands(ctx))
-        for i, arg in enumerate(args):
-            if not arg.startswith("-"):
-                if arg not in known:
-                    args = args[:i] + ["_oneshot"] + args[i:]
-                break
-        return super().parse_args(ctx, args)
+    def resolve_command(self, ctx, args):
+        if args and args[0] not in self.commands and not args[0].startswith("-"):
+            args = ["_oneshot", *args]
+        return super().resolve_command(ctx, args)
 
 
 app = typer.Typer(
@@ -513,7 +509,7 @@ def _oneshot(
 
     try:
         run_pipeline(request, progress_hook=_progress_hook)
-    except Exception as exc:
+    except AudawisprError as exc:
         _fail(str(exc))
 
 

@@ -114,10 +114,10 @@ def _export_csv(
                 )
                 writer.writerow(
                     [
-                        segment.text,
+                        _safe_csv_cell(segment.text),
                         sound_ref,
-                        ipa,
-                        translation,
+                        _safe_csv_cell(ipa),
+                        _safe_csv_cell(translation),
                         manifest.source_audio.file_name,
                         f"{segment.start:.3f}-{segment.end:.3f}",
                         segment.id,
@@ -196,3 +196,10 @@ def _resolve_audio(manifest_path: Path, audio_file: str) -> Path:
 def _copy_media(src: Path, dest_dir: Path) -> None:
     dest = dest_dir / src.name
     shutil.copy2(src, dest)
+
+
+def _safe_csv_cell(value: str) -> str:
+    """Neutralize CSV formula injection in spreadsheet apps."""
+    if value and value[0] in "=+-@":
+        return "'" + value
+    return value
