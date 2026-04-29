@@ -16,6 +16,53 @@ DECK_ID = 2059400110
 MODEL_ID = 2059400111
 MODEL_NAME = "audawispr Segment Card"
 
+_ANKI_CSS = """\
+.card {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 20px;
+    text-align: center;
+    color: #333;
+    line-height: 1.5;
+    padding: 20px;
+}
+
+.source-text {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+}
+
+.audio {
+    margin: 16px 0;
+}
+
+.ipa {
+    font-style: italic;
+    color: #666;
+    font-size: 18px;
+    margin: 8px 0;
+}
+
+.translation {
+    font-size: 16px;
+    color: #444;
+    margin: 8px 0;
+}
+
+.metadata {
+    font-size: 13px;
+    color: #999;
+    margin-top: 16px;
+}
+
+hr#answer {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 16px 0;
+}
+"""
+
 ANKI_MODEL = genanki.Model(
     MODEL_ID,
     MODEL_NAME,
@@ -31,13 +78,21 @@ ANKI_MODEL = genanki.Model(
     templates=[
         {
             "name": "Card 1",
-            "qfmt": "{{SourceText}}<br>{{Audio}}",
+            "qfmt": (
+                '<div class="source-text">{{SourceText}}</div>'
+                '<div class="audio">{{Audio}}</div>'
+            ),
             "afmt": (
                 '{{FrontSide}}<hr id="answer">'
-                "{{IPA}}<br>{{Translation}}<br>{{SourceFile}}<br>{{TimestampRange}}"
+                '<div class="ipa">{{IPA}}</div>'
+                '<div class="translation">{{Translation}}</div>'
+                '<div class="metadata">'
+                "{{SourceFile}} &middot; {{TimestampRange}}"
+                "</div>"
             ),
         },
     ],
+    css=_ANKI_CSS,
 )
 
 
@@ -114,10 +169,10 @@ def _export_csv(
                 )
                 writer.writerow(
                     [
-                        segment.text,
+                        _safe_csv_cell(segment.text),
                         sound_ref,
-                        ipa,
-                        translation,
+                        _safe_csv_cell(ipa),
+                        _safe_csv_cell(translation),
                         manifest.source_audio.file_name,
                         f"{segment.start:.3f}-{segment.end:.3f}",
                         segment.id,
@@ -196,3 +251,10 @@ def _resolve_audio(manifest_path: Path, audio_file: str) -> Path:
 def _copy_media(src: Path, dest_dir: Path) -> None:
     dest = dest_dir / src.name
     shutil.copy2(src, dest)
+
+
+def _safe_csv_cell(value: str) -> str:
+    """Neutralize CSV formula injection in spreadsheet apps."""
+    if value and value[0] in "=+-@":
+        return "'" + value
+    return value

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+import typer.core
 
 from audawispr.__about__ import __version__
 from audawispr.core.clipping import ClipOptions, clip_manifest_file
@@ -20,10 +21,22 @@ from audawispr.core.segmentation import (
 )
 from audawispr.core.transcription import TranscriptionOptions, transcribe_audio
 
+_VERBOSE = False
+
+
+class _OneShotFallbackGroup(typer.core.TyperGroup):
+    """Redirect unknown positional args to the hidden _oneshot command."""
+
+    def resolve_command(self, ctx, args):
+        if args and args[0] not in self.commands and not args[0].startswith("-"):
+            args = ["_oneshot", *args]
+        return super().resolve_command(ctx, args)
+
+
 app = typer.Typer(
-    add_completion=False,
-    help="Turn language-learning audio into Anki-ready study materials.",
+    cls=_OneShotFallbackGroup,
     no_args_is_help=True,
+    add_completion=False,
 )
 
 
@@ -40,12 +53,21 @@ def main(
         typer.Option(
             "--version",
             callback=_version_callback,
-            help="Show the audawispr version and exit.",
+            help="Show version and exit.",
             is_eager=True,
         ),
     ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            help="Print phase names to stderr.",
+        ),
+    ] = False,
 ) -> None:
-    """Turn language-learning audio into Anki-ready study materials."""
+    """audawispr — audio to Anki in one shot."""
+    global _VERBOSE
+    _VERBOSE = verbose
 
 
 @app.command()
@@ -390,6 +412,105 @@ def export(
         _fail(str(exc))
 
     typer.echo(f"Wrote export: {output}")
+
+
+@app.command(hidden=True, name="_oneshot")
+def _oneshot(
+    audio: Annotated[
+        Path,
+        typer.Argument(
+            exists=False,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Audio file to process.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--output",
+            "-o",
+            help="Output path (.apkg or .csv).",
+        ),
+    ],
+    language: Annotated[
+        str,
+        typer.Option("--language", "-l"),
+    ] = "fr",
+    ipa: Annotated[
+        bool,
+        typer.Option("--ipa/--no-ipa"),
+    ] = False,
+    model_size: Annotated[
+        str,
+        typer.Option("--model-size"),
+    ] = "small",
+    device: Annotated[
+        str,
+        typer.Option("--device"),
+    ] = "auto",
+    compute_type: Annotated[
+        str,
+        typer.Option("--compute-type"),
+    ] = "int8",
+    vad: Annotated[
+        bool,
+        typer.Option("--vad/--no-vad"),
+    ] = True,
+    pause_split_ms: Annotated[
+        int,
+        typer.Option("--pause-split-ms"),
+    ] = 700,
+    min_duration_ms: Annotated[
+        int,
+        typer.Option("--min-duration-ms"),
+    ] = 600,
+    max_duration_ms: Annotated[
+        int,
+        typer.Option("--max-duration-ms"),
+    ] = 7000,
+    deck_name: Annotated[
+        str | None,
+        typer.Option("--deck-name"),
+    ] = None,
+    keep_work: Annotated[
+        bool,
+        typer.Option("--keep-work"),
+    ] = False,
+) -> None:
+    """Run the full pipeline in one shot."""
+    from audawispr.core.pipeline import (
+        PipelineRequest,
+        ProgressEvent,
+        run_pipeline,
+    )
+
+    def _progress_hook(event: ProgressEvent) -> None:
+        if _VERBOSE:
+            typer.echo(f"{event.phase}: {event.message}", err=True)
+
+    request = PipelineRequest(
+        audio=audio,
+        output=output,
+        language=language,
+        ipa=ipa,
+        model_size=model_size,
+        device=device,
+        compute_type=compute_type,
+        vad=vad,
+        pause_split_ms=pause_split_ms,
+        min_duration_ms=min_duration_ms,
+        max_duration_ms=max_duration_ms,
+        deck_name=deck_name,
+        keep_work=keep_work,
+    )
+
+    try:
+        run_pipeline(request, progress_hook=_progress_hook)
+    except AudawisprError as exc:
+        _fail(str(exc))
 
 
 def _fail(message: str) -> None:
