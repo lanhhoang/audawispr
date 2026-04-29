@@ -53,7 +53,7 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 - [x] `uv run ruff check .`
 - [x] `uv run ruff format --check .`
 - [x] `uv run ty check src tests`
-- [ ] CI quality workflow passes.
+- [x] CI quality workflow passes.
 - [x] Manual smoke creates a non-empty `.apkg` from a fixture clipped manifest.
 - [x] README documents APKG export and `--deck-name`.
 
@@ -73,7 +73,8 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 - Manual smoke: inspected APKG as ZIP, confirmed `collection.anki2` and `media` entries present.
 - SQLite inspection of `collection.anki2` confirms deck name and notes with stable GUIDs.
 - CSV export from Phase 6 still works (backward compat verified by tests).
-- Pending: CI quality workflow on remote GitHub Actions.
+- CI quality workflow passed on remote GitHub Actions (Linux, macOS, Windows).
+- Manual Anki Desktop import of `deck.apkg` verified: deck loaded with correct name, cards, audio playback, and fields.
 
 ## Actual Implementation
 
