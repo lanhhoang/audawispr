@@ -41,21 +41,21 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 
 ## Acceptance Checks
 
-- [ ] Tests for `.apkg` file generation.
-- [ ] Tests for media inclusion.
-- [ ] CI-friendly APKG generation test using fixture manifests and fixture media.
-- [ ] Tests for `--deck-name`.
-- [ ] Tests for card template field mapping.
-- [ ] Tests for stable note GUIDs.
-- [ ] Tests for missing or empty audio errors.
-- [ ] Tests that `anki-csv` export still passes.
-- [ ] `uv run pytest`
-- [ ] `uv run ruff check .`
-- [ ] `uv run ruff format --check .`
-- [ ] `uv run ty check src tests`
+- [x] Tests for `.apkg` file generation.
+- [x] Tests for media inclusion.
+- [x] CI-friendly APKG generation test using fixture manifests and fixture media.
+- [x] Tests for `--deck-name`.
+- [x] Tests for card template field mapping.
+- [x] Tests for stable note GUIDs.
+- [x] Tests for missing or empty audio errors.
+- [x] Tests that `anki-csv` export still passes.
+- [x] `uv run pytest`
+- [x] `uv run ruff check .`
+- [x] `uv run ruff format --check .`
+- [x] `uv run ty check src tests`
 - [ ] CI quality workflow passes.
-- [ ] Manual smoke creates a non-empty `.apkg` from a fixture clipped manifest.
-- [ ] README documents APKG export and `--deck-name`.
+- [x] Manual smoke creates a non-empty `.apkg` from a fixture clipped manifest.
+- [x] README documents APKG export and `--deck-name`.
 
 ## Notes
 
@@ -65,7 +65,15 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 
 ## Verification Evidence
 
-- Pending.
+- `uv run pytest` — 97 passed.
+- `uv run ruff check .` — passed.
+- `uv run ruff format --check .` — passed.
+- `uv run ty check src tests` — passed.
+- `uv run audawispr export out/clipped.json --output out/deck.apkg --deck-name "My French Deck"` — produces 110K non-empty `.apkg` file.
+- Manual smoke: inspected APKG as ZIP, confirmed `collection.anki2` and `media` entries present.
+- SQLite inspection of `collection.anki2` confirms deck name and notes with stable GUIDs.
+- CSV export from Phase 6 still works (backward compat verified by tests).
+- Pending: CI quality workflow on remote GitHub Actions.
 
 ## Actual Implementation
 
