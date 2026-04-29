@@ -9,6 +9,14 @@ from audawispr.core.enrichment import (
 )
 from audawispr.core.export import ExportOptions, export_manifest_file
 from audawispr.core.manifest import TranscriptManifest, load_manifest, save_manifest
+from audawispr.core.pipeline import (
+    CancellationToken,
+    PipelineRequest,
+    PipelineResult,
+    ProgressEvent,
+    ProgressHook,
+    run_pipeline,
+)
 from audawispr.core.segmentation import (
     SegmentationOptions,
     default_inspection_tsv_path,
@@ -18,9 +26,14 @@ from audawispr.core.segmentation import (
 from audawispr.core.transcription import TranscriptionOptions, transcribe_audio
 
 __all__ = [
+    "CancellationToken",
     "ClipOptions",
     "EnrichmentOptions",
     "ExportOptions",
+    "PipelineRequest",
+    "PipelineResult",
+    "ProgressEvent",
+    "ProgressHook",
     "SegmentationOptions",
     "TranscriptManifest",
     "TranscriptionOptions",
@@ -31,6 +44,7 @@ __all__ = [
     "enrich_manifest_file",
     "export_manifest_file",
     "load_manifest",
+    "run_pipeline",
     "save_inspection_tsv",
     "save_manifest",
     "segment_manifest",

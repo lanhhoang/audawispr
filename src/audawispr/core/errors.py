@@ -31,3 +31,11 @@ class ClippingError(AudawisprError):
 
 class ExportError(AudawisprError):
     """Raised when manifest export cannot produce valid output."""
+
+
+class CancelledError(AudawisprError):
+    """Raised when a pipeline run is cooperatively cancelled."""
+
+
+class OneShotError(AudawisprError):
+    """Raised when the one-shot pipeline cannot complete."""
