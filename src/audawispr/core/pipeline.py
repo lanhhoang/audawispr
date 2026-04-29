@@ -99,11 +99,7 @@ def _derive_work_dir(output: Path) -> Path:
     if output.suffix:
         existing = output.with_suffix("")
         work_dir = existing / "_work"
-        if (
-            existing != work_dir
-            and hasattr(existing, "is_dir")
-            and existing.is_dir()
-        ):
+        if existing != work_dir and hasattr(existing, "is_dir") and existing.is_dir():
             raise ValueError(
                 f"Output path {output} collides with existing directory {existing}"
             )
@@ -242,17 +238,11 @@ def run_pipeline(
     finally:
         # C1: Explicit cancellation check (belt-and-suspenders)
         exc_info = sys.exc_info()
-        is_cancelled = (
-            exc_info[1] is not None
-            and isinstance(exc_info[1], CancelledError)
+        is_cancelled = exc_info[1] is not None and isinstance(
+            exc_info[1], CancelledError
         )
 
-        if (
-            not is_cancelled
-            and success
-            and not request.keep_work
-            and work_dir.exists()
-        ):
+        if not is_cancelled and success and not request.keep_work and work_dir.exists():
             # C2: Symlink safety — manually check all entries including dotfiles
             # before cleanup. os.scandir catches ALL entries unlike rglob("*")
             # which skips dot-prefixed files.

@@ -231,9 +231,7 @@ def _export_apkg(
             )
             deck.add_note(note)
         else:
-            logger.warning(
-                "Segment %s has no audio file; skipping", segment.id
-            )
+            logger.warning("Segment %s has no audio file; skipping", segment.id)
 
     audio_count = sum(1 for s in manifest.segments if s.audio_file)
     if audio_count == 0:
@@ -258,9 +256,7 @@ def _resolve_audio(manifest_path: Path, audio_file: str) -> Path:
     try:
         resolved.relative_to(manifest_path.parent.resolve())
     except ValueError as exc:
-        raise ExportError(
-            f"audio file escapes manifest directory: {resolved}"
-        ) from exc
+        raise ExportError(f"audio file escapes manifest directory: {resolved}") from exc
     if not resolved.exists():
         raise ExportError(f"audio file does not exist: {resolved}")
     return resolved

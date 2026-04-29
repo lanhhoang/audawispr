@@ -586,7 +586,8 @@ def test_media_files_basename_only(tmp_path: Path) -> None:
 
 
 def test_apkg_export_warns_missing_audio(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """APKG export should warn about segments that have no audio_file."""
     manifest = _make_clipped_manifest(tmp_path)
