@@ -353,6 +353,29 @@ def test_export_apkg_default_deck_name(tmp_path: Path) -> None:
     assert "audawispr::fr" in decks_json
 
 
+def test_export_apkg_card_template(tmp_path: Path) -> None:
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    export_manifest_file(manifest_path, apkg_path)
+
+    extract_dir = tmp_path / "extract"
+    extract_dir.mkdir()
+    with zipfile.ZipFile(apkg_path, "r") as zf:
+        zf.extract("collection.anki2", extract_dir)
+
+    conn = sqlite3.connect(extract_dir / "collection.anki2")
+    models_json = conn.execute("SELECT models FROM col").fetchone()[0]
+    conn.close()
+
+    assert '"css": ' in models_json
+    assert "source-text" in models_json
+    assert "metadata" in models_json
+    assert "&middot;" in models_json
+
+
 def test_export_apkg_stable_guid(tmp_path: Path) -> None:
     manifest = _make_clipped_manifest(tmp_path)
     _make_snippets(tmp_path, manifest)

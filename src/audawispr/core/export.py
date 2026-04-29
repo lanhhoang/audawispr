@@ -16,6 +16,53 @@ DECK_ID = 2059400110
 MODEL_ID = 2059400111
 MODEL_NAME = "audawispr Segment Card"
 
+_ANKI_CSS = """\
+.card {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 20px;
+    text-align: center;
+    color: #333;
+    line-height: 1.5;
+    padding: 20px;
+}
+
+.source-text {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+}
+
+.audio {
+    margin: 16px 0;
+}
+
+.ipa {
+    font-style: italic;
+    color: #666;
+    font-size: 18px;
+    margin: 8px 0;
+}
+
+.translation {
+    font-size: 16px;
+    color: #444;
+    margin: 8px 0;
+}
+
+.metadata {
+    font-size: 13px;
+    color: #999;
+    margin-top: 16px;
+}
+
+hr#answer {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 16px 0;
+}
+"""
+
 ANKI_MODEL = genanki.Model(
     MODEL_ID,
     MODEL_NAME,
@@ -31,13 +78,21 @@ ANKI_MODEL = genanki.Model(
     templates=[
         {
             "name": "Card 1",
-            "qfmt": "{{SourceText}}<br>{{Audio}}",
+            "qfmt": (
+                '<div class="source-text">{{SourceText}}</div>'
+                '<div class="audio">{{Audio}}</div>'
+            ),
             "afmt": (
                 '{{FrontSide}}<hr id="answer">'
-                "{{IPA}}<br>{{Translation}}<br>{{SourceFile}}<br>{{TimestampRange}}"
+                '<div class="ipa">{{IPA}}</div>'
+                '<div class="translation">{{Translation}}</div>'
+                '<div class="metadata">'
+                "{{SourceFile}} &middot; {{TimestampRange}}"
+                "</div>"
             ),
         },
     ],
+    css=_ANKI_CSS,
 )
 
 
