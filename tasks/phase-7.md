@@ -62,10 +62,14 @@ turn an already-clipped manifest into a ready-to-import Anki package.
 - Do not implement the full root one-shot command in this phase.
 - Manual Anki Desktop import remains separate from CI and can be tracked as a
   release confidence check.
+- Grayscale CSS styling (`_ANKI_CSS`) applied to APKG card templates: centered
+  layout, source-text header, IPA/translation metadata, and muted secondary
+  text. Verified by `test_export_apkg_card_template` which checks CSS content,
+  `.source-text`/`.metadata` class wrappers, and middot separator in the model.
 
 ## Verification Evidence
 
-- `uv run pytest` — 97 passed.
+- `uv run pytest` — 124 passed.
 - `uv run ruff check .` — passed.
 - `uv run ruff format --check .` — passed.
 - `uv run ty check src tests` — passed.
