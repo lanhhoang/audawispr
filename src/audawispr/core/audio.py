@@ -79,6 +79,7 @@ def _read_duration_seconds(path: Path) -> float | None:
         completed = subprocess.run(
             [
                 ffprobe.path,
+                "-nostdin",
                 "-v",
                 "error",
                 "-show_entries",

@@ -94,10 +94,14 @@ def clip_manifest_file(
     # Range check — prevent DoS via extreme bitrate values
     if opts.bitrate[-1:] in "kK":
         value = int(opts.bitrate[:-1])
+        if value == 0:
+            raise ClippingError("Bitrate must be greater than 0")
         if value > 320:
             raise ClippingError(f"Bitrate {opts.bitrate} exceeds maximum 320k")
     elif opts.bitrate[-1:] in "mM":
         value = int(opts.bitrate[:-1])
+        if value == 0:
+            raise ClippingError("Bitrate must be greater than 0")
         if value > 10:
             raise ClippingError(f"Bitrate {opts.bitrate} exceeds maximum 10M")
     else:

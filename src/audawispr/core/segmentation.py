@@ -20,8 +20,8 @@ from audawispr.core.manifest import (
 )
 
 TERMINAL_PUNCTUATION = (".", "!", "?", "...")
-_SPACE_BEFORE_ALWAYS = re.compile(r"\s+([,.%])")
-_SPACE_BEFORE_NON_FRENCH = re.compile(r"\s+([:;!?])")
+_SPACE_BEFORE_ALWAYS = re.compile(r"\s+([,.])")
+_SPACE_BEFORE_NON_FRENCH = re.compile(r"\s+([:;!?%])")
 SPACE_AFTER_OPEN_RE = re.compile(r"([(\[{])\s+")
 TSV_TEXT_WHITESPACE_RE = re.compile(r"[\t\r\n]+")
 TIMING_EPSILON_SECONDS = 1e-9

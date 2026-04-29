@@ -291,7 +291,12 @@ def _safe_csv_cell(value: str) -> str:
     # Strip \r first — CR can cause CSV row break and formula injection bypass.
     # Use re.sub() for explicit control over stripped characters.
     cleaned = value.replace("\r", "")
-    stripped = re.sub(r"^[\s\u200b\u200c\u200d\u2060\ufeff\u180e]+", "", cleaned)
+    _INVISIBLE_LEAD = (
+        r"^[\s\u200b\u200c\u200d\u200e\u200f"
+        r"\u2060\u2061\u2062\u2063\u2064"
+        r"\ufeff\u180e\u061c]+"
+    )
+    stripped = re.sub(_INVISIBLE_LEAD, "", cleaned)
     if stripped and stripped[0] in "=+-@":
         return "'" + cleaned
     return cleaned

@@ -312,7 +312,8 @@ def run_pipeline(
             # depth before cleanup, preventing shutil.rmtree from following them.
             def _remove_symlinks(path: Path) -> int:
                 count = 0
-                for entry in path.rglob("*"):
+                # rglob("*") misses dotfiles, so also rglob(".*") for hidden entries
+                for entry in list(path.rglob("*")) + list(path.rglob(".*")):
                     try:
                         if entry.is_symlink():
                             entry.unlink()
