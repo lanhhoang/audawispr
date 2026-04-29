@@ -118,3 +118,46 @@ G1 → G2 → G3 → G4 → G5 → G6 → Verify
 1. **E4 disk_usage threshold**: 500 MB minimum free space (configurable constant)
 2. **D3 skip vs abort**: `_resolve_audio` file-not-found becomes warning + skip per-segment; bulk `audio_count == 0` error still fires if ALL segments missing
 3. **D1 `%` character for French**: Space before `%` preserved for French (correct typography); not explicitly required by spec but consistent with French spacing rules
+
+## Post-Review Findings
+
+Identified by code-reviewer, security-auditor, and security-attacker agents
+after G1–G5 implementation.
+
+### Execution Batches (by complexity, ascending)
+
+| Batch | Items | Complexity | Description |
+|-------|-------|------------|-------------|
+| RH1 | H3, H2, H1 | Trivial (6 loc) | Docstring fix, empty-file rejection, bitrate case-sensitivity |
+| RH2 | H4, H6, H5 | Simple (14 loc) | Zero-width CSV bypass, disk_usage OSError guard, work_dir symlink guard |
+| RH3 | H7, H8, H9 | Medium (28 loc) | Bitrate upper bound, Whisper cache disk check, recursive symlink removal |
+
+No dependencies — all items are fully independent and parallel-executable within each batch.
+
+### Findings Detail
+
+#### HIGH Severity
+
+- **H4 (F1-extension):** `\u200b` (zero-width space) and other Unicode Cf-category characters bypass `\s` in `_safe_csv_cell` → CSV formula injection. Fix: `re.sub(r'^[\s\u200b\u200c\u200d\u2060\ufeff\u180e]+', '', cleaned)`. File: `src/audawispr/core/export.py`.
+- **H5 (F2-new):** `work_dir` path not checked for pre-existing symlink after `mkdir()` → confused deputy attack (pipeline writes to target of external symlink). Fix: add `work_dir.is_symlink()` guard after `mkdir()`. File: `src/audawispr/core/pipeline.py`.
+
+#### MEDIUM Severity
+
+- **H7 (E2-extension):** Bitrate regex has no upper bound → DoS via `9999999k` producing massive output files. Also accepts `0` and `0k` silently. Fix: add range limit (max 320k or 10M) and reject `0`. File: `src/audawispr/core/clipping.py`.
+- **H8 (E4-extension):** Disk pre-flight checks `work_dir` volume but Whisper model cache may be on different volume with insufficient space for first-run download (2+ GB). Fix: check cache-dir volume too, raise threshold. File: `src/audawispr/core/pipeline.py`.
+- **H9 (F4-extension):** `_remove_symlinks` only scans top-level entries; subdirectory symlinks (e.g., `work_dir/media/bad_link`) survive. Fix: make walk recursive via `path.rglob("*")`. File: `src/audawispr/core/pipeline.py`.
+
+#### LOW / NIT Severity
+
+- **H1 (F1-docs):** `_safe_csv_cell` docstring misstates Python `str.lstrip()` behavior (Python 3's lstrip IS Unicode-aware). Fix: rewrite comments accurately. File: `src/audawispr/core/export.py`.
+- **H2 (E3-extension):** Zero-byte audio files not rejected → wasted compute DoS. Fix: add `size_bytes == 0` guard. File: `src/audawispr/core/audio.py`.
+- **H3 (E2-case):** Bitrate regex `[kM]` rejects valid uppercase `K` → `128K` fails validation. Fix: `[kKmM]`. File: `src/audawispr/core/clipping.py`.
+- **H6 (E4-guard):** `_check_disk_space` unprotected against `shutil.disk_usage` OSError on exotic filesystems. Fix: wrap in try/except. File: `src/audawispr/core/pipeline.py`.
+
+### Test Gaps
+
+- Add `\u200b=2+2` and `\u200b\u200d=CMD` test assertions to `test_safe_csv_cell_whitespace_bypass`
+- Add zero-byte rejection test to audio validation tests
+- Add bitrate `128K` (uppercase) acceptance test
+- Add bitrate `0` rejection test
+- Add `work_dir` symlink rejection test to pipeline tests
