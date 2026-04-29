@@ -26,6 +26,12 @@ The CI quality workflow must stay green for every phase after Phase 1.
 | 6   | [Importable Anki CSV Export](phase-6.md)             | ✅ Done |
 | 7   | [Native `.apkg` Export](phase-7.md)                  | ✅ Done |
 | 8   | [One-Shot CLI + Python Facade](phase-8.md)           | ✅ Done    |
+| 9   | [Pre-Release Security Audit Remediation](phase-9.md)   | ⬜ Pending |
+| 10  | [Correctness & Polish](phase-10.md)                    | ⬜ Pending |
+
+> **v0.1.0 release is gated on Phases 9 and 10.** Core functionality is
+> complete through Phase 8, but the release will not ship until security
+> remediation and correctness hardening are finished.
 
 ## Epic TODO
 
@@ -37,6 +43,8 @@ The CI quality workflow must stay green for every phase after Phase 1.
 - [x] Phase 6: Importable Anki CSV Export
 - [x] Phase 7: Native `.apkg` Export
 - [x] Phase 8: One-Shot CLI + Python Facade
+- [ ] Phase 9: Pre-Release Security Audit Remediation
+- [ ] Phase 10: Correctness & Polish
 
 ## Public Interfaces By End Of Epic
 
