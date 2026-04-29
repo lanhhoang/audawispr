@@ -469,6 +469,10 @@ def test_safe_csv_cell_whitespace_bypass() -> None:
     # Whitespace-only strings should be returned unchanged
     assert _safe_csv_cell("   ") == "   "
     assert _safe_csv_cell("") == ""
+    # \r bypass regression: carriage return stripped before lstrip
+    assert _safe_csv_cell("\r=CMD") == "'=CMD"
+    # Unicode whitespace bypass (F1): \u00a0 (non-breaking space) stripped
+    assert _safe_csv_cell("\u00a0=2+2") == "'\u00a0=2+2"
 
 
 def test_csv_cell_sanitizes_segment_id_and_file_name(tmp_path: Path) -> None:
