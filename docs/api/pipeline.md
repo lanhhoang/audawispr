@@ -12,13 +12,6 @@
       show_root_heading: true
       show_source: true
 
-## ProgressEvent
-
-::: audawispr.pipeline.ProgressEvent
-    rendering:
-      show_root_heading: true
-      show_source: true
-
 ## CancellationToken
 
 ::: audawispr.pipeline.CancellationToken

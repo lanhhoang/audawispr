@@ -8,7 +8,6 @@ from audawispr.core.pipeline import (
     CancellationToken,
     PipelineRequest,
     PipelineResult,
-    ProgressEvent,
     ProgressHook,
     run_pipeline,
 )
@@ -89,7 +88,7 @@ class Pipeline:
         """Run the pipeline for the given audio file.
 
         :param audio: Path to the input audio file.
-        :param progress: Optional callback receiving :class:`ProgressEvent`
+        :param progress: Optional callback receiving a ``ProgressEvent``
             for each pipeline phase.
         :param cancel: Optional :class:`CancellationToken` for cooperative
             cancellation.
