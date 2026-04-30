@@ -28,6 +28,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 | 8   | [One-Shot CLI + Python Facade](phase-8.md)           | ✅ Done    |
 | 9   | [Pre-Release Security Audit Remediation](phase-9.md)   | ✅ Done    |
 | 10  | [Correctness & Polish](phase-10.md)                    | ✅ Done    |
+| 11  | [PyPI Publishing Preparation](phase-11.md)            | ⬜ Pending |
 
 > **v0.1.0 release is gated on Phases 9 and 10.** Core functionality is
 > complete through Phase 8, but the release will not ship until security
@@ -45,6 +46,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 - [x] Phase 8: One-Shot CLI + Python Facade
 - [x] Phase 9: Pre-Release Security Audit Remediation
 - [x] Phase 10: Correctness & Polish
+- [ ] Phase 11: PyPI Publishing Preparation
 
 ## Public Interfaces By End Of Epic
 
