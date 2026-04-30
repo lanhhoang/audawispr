@@ -8,13 +8,45 @@ from audawispr.core.pipeline import (
     CancellationToken,
     PipelineRequest,
     PipelineResult,
+    ProgressEvent,
     ProgressHook,
     run_pipeline,
 )
 
 
 class Pipeline:
-    """Narrow public API for running the full audawispr pipeline."""
+    """Narrow public API for running the full audawispr pipeline.
+
+    Usage::
+
+        from pathlib import Path
+        from audawispr import Pipeline
+
+        Pipeline(
+            output=Path("deck.apkg"),
+            language="fr",
+            ipa=True,
+        ).run(Path("lesson.mp3"))
+
+    :param output: Output path (``.apkg`` for Anki package, directory for CSV).
+    :param language: Source language code passed to faster-whisper
+        (e.g. ``"fr"``, ``"en"``, ``"ja"``, ``"de"``).
+    :param ipa: Generate IPA phonetic transcription (French only).
+    :param model_size: faster-whisper model size.
+        One of ``"tiny"``, ``"base"``, ``"small"``, ``"medium"``, ``"large-v3"``.
+    :param device: Device for Whisper inference.
+        ``"auto"`` selects CUDA when available, else CPU.
+    :param compute_type: Compute type for Whisper.
+        ``"int8"``, ``"float16"``, or ``"float32"``.
+    :param vad: Enable voice activity detection filtering.
+    :param pause_split_ms: Pause duration (ms) triggering a segment split.
+    :param min_duration_ms: Minimum segment duration (ms).
+    :param max_duration_ms: Maximum segment duration (ms).
+    :param translation_provider: Translation provider.
+        ``"none"`` (default) skips translation.
+    :param deck_name: Anki deck name. Defaults to ``"audawispr::{language}"``.
+    :param keep_work: Keep working directory after completion.
+    """
 
     def __init__(
         self,
@@ -54,7 +86,15 @@ class Pipeline:
         progress: ProgressHook | None = None,
         cancel: CancellationToken | None = None,
     ) -> PipelineResult:
-        """Run the pipeline for the given audio file."""
+        """Run the pipeline for the given audio file.
+
+        :param audio: Path to the input audio file.
+        :param progress: Optional callback receiving :class:`ProgressEvent`
+            for each pipeline phase.
+        :param cancel: Optional :class:`CancellationToken` for cooperative
+            cancellation.
+        :returns: :class:`PipelineResult` with ``output_path`` and ``work_dir``.
+        """
         request = PipelineRequest(
             audio=audio,
             output=self._output,
