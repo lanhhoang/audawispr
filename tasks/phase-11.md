@@ -50,13 +50,13 @@ the public Python API surface.
 
 ### Execution Groups
 
-| Group | Items | Description |
-|-------|-------|-------------|
-| G1 | B1, B3 | Create LICENSE, add README badges |
-| G2 | A1, A2, A3, A6 | pyproject.toml metadata + release workflow |
-| G3 | A4, A5 | Re-export public API symbols |
-| G4 | B2 | Update README Setup section |
-| Verify | Build + test | `uv build`, `uv run pytest`, import checks |
+| Group  | Items          | Description                                |
+| ------ | -------------- | ------------------------------------------ |
+| G1     | B1, B3         | Create LICENSE, add README badges          |
+| G2     | A1, A2, A3, A6 | pyproject.toml metadata + release workflow |
+| G3     | A4, A5         | Re-export public API symbols               |
+| G4     | B2             | Update README Setup section                |
+| Verify | Build + test   | `uv build`, `uv run pytest`, import checks |
 
 ### Execution Order
 
@@ -65,7 +65,7 @@ G1 → G2 → G3 → G4 → Verify (all parallel within group, G2+G3 can run con
 ## Decisions
 
 - **Version**: `v0.1.0` — using Semantic Versioning (SemVer), not Calendar Versioning (CalVer). SemVer gives `pip` meaningful compatibility signals (`>=0.1.0,<0.2.0`).
-- **Publisher**: GitHub Actions Trusted Publisher (OIDC) — no API tokens to manage. One-time PyPI setup: add `lanhhoang/audawispr-three` repo with workflow `release.yml`.
+- **Publisher**: GitHub Actions Trusted Publisher (OIDC) — no API tokens to manage. One-time PyPI setup: add `lanhhoang/audawispr` repo with workflow `release.yml`.
 - **Workflow name**: `release.yml` (not `publish.yml` or `pypipublish.yml`).
 - **whisper.cpp backend**: Deferred to separate epic. `pywhispercpp` (v1.4.1) confirmed as viable binding — pre-built CPU wheels cross-platform, MIT license, clean API matching existing `TranscriptionBackend` protocol.
 - **Docs directory**: Optional — deferred. README is thorough enough for initial PyPI page.
@@ -73,3 +73,41 @@ G1 → G2 → G3 → G4 → Verify (all parallel within group, G2+G3 can run con
 ## Verification Evidence
 
 (to be filled after implementation)
+
+## Actual Implementation
+
+### Readiness (2026-04-29)
+
+Four-agent review (analyzer, researcher, architect, verifier) confirmed **GO**:
+
+- **Phases 1–10** complete, merged to `master`, CI green (143/143 tests, lint/format/typecheck clean)
+- **0 of 9** Phase 11 items started — clean branch `epic-1-phase-11-pypi-publishing-preparation`
+- **Repo renamed** from `audawispr-three` to `audawispr` (`github.com:lanhhoang/audawispr.git`)
+- `uv build` already produces valid `audawispr-0.1.0.tar.gz` and `.whl` artifacts
+
+### Prioritized Execution Order
+
+| Step   | Items          | Description                                    | Depends On                        | Parallel?           |
+| ------ | -------------- | ---------------------------------------------- | --------------------------------- | ------------------- |
+| **1**  | B1, B3         | Create LICENSE (MIT) + README badges           | None                              | —                   |
+| 2      | A1, A2, A3, A6 | pyproject.toml metadata + release.yml          | Step 1                            | Can run with Step 3 |
+| 3      | A4, A5         | Re-export Pipeline + exceptions in **init**.py | None (logically independent)      | Can run with Step 2 |
+| 4      | B2             | Add pip install / uv pip install to README     | Steps 2, 3 (for accurate content) | —                   |
+| Verify | All            | Build, imports, tests, lint, format, typecheck | Steps 1–4                         | Sequential          |
+
+**Rationale:** G1 first because LICENSE must exist before `pyproject.toml` references it (`license = {text = "MIT"}`). G2 and G3 independent — can run concurrently. G4 deferred until metadata and API surface are settled.
+
+### Risks to Address During Implementation
+
+| #   | Risk                                                                                                          | Mitigation                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| R1  | CI matrix only runs Python 3.11 but classifiers claim 3.11/3.12/3.13 — claiming support without test coverage | Either add 3.12/3.13 to CI matrix in quality.yml, or trim classifiers to 3.11 only for v0.1.0 and expand later |
+| R2  | README references "private repository" — misleading once public on PyPI                                       | Update or remove the private-repo note during B2                                                               |
+| R3  | Trusted Publisher needs manual PyPI-side setup before first `v0.1.0` tag push                                 | Pre-flight: configure lanhhoang/audawispr + release.yml in PyPI project settings                               |
+| R4  | `onnxruntime` upper pin (`<1.23`) may cause install conflicts on newer Python                                 | Acceptable for v0.1.0; loosen in follow-up if needed                                                           |
+
+### Pre-Flight (Before Tag Push)
+
+- [ ] Log into https://pypi.org/ → Project Settings → Trusted Publisher
+- [ ] Add: Owner = `lanhhoang`, Repo = `audawispr`, Workflow = `release.yml`
+- [ ] Ensure project name `audawispr` is reserved (create empty project if needed)
