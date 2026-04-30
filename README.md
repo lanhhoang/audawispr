@@ -1,5 +1,8 @@
 # audawispr
 
+[![Quality](https://github.com/lanhhoang/audawispr/actions/workflows/quality.yml/badge.svg)](https://github.com/lanhhoang/audawispr/actions/workflows/quality.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
 Split audio files into high-quality sentence-based learning materials.
 
 ## Status
@@ -20,6 +23,22 @@ segmentation, French IPA enrichment, audio clipping, Anki CSV export, native
 
 ## Setup
 
+Install audawispr from PyPI:
+
+```sh
+pip install audawispr
+```
+
+Or with uv:
+
+```sh
+uv pip install audawispr
+```
+
+After installing, run `audawispr` directly. Use `uv run audawispr` only when working in a cloned repository.
+
+For local development:
+
 Install runtime and development dependencies:
 
 ```sh
@@ -31,7 +50,7 @@ uv sync --dev
 Turn an audio file into an Anki deck with one command:
 
 ```sh
-uv run audawispr lesson.mp3 --output deck.apkg --language fr --ipa
+audawispr lesson.mp3 --output deck.apkg --language fr --ipa
 ```
 
 Or use the Python API:
@@ -54,22 +73,24 @@ cleaned up on success unless `--keep-work` is passed.
 
 ## Usage
 
+This section and Quickstart use the bare `audawispr` command. For development, prefix with `uv run`.
+
 Show the CLI help:
 
 ```sh
-uv run audawispr --help
+audawispr --help
 ```
 
 Show the installed package version:
 
 ```sh
-uv run audawispr --version
+audawispr --version
 ```
 
 Check local runtime readiness:
 
 ```sh
-uv run audawispr doctor
+audawispr doctor
 ```
 
 `doctor` reports the audawispr package version, Python version, and whether
@@ -79,25 +100,25 @@ FFmpeg and FFprobe are available from `AUDAWISPR_FFMPEG`, `AUDAWISPR_FFPROBE`,
 Transcribe audio locally into a transcript manifest:
 
 ```sh
-uv run audawispr transcribe lesson.mp3 --output out/transcript.json --language fr
+audawispr transcribe lesson.mp3 --output out/transcript.json --language fr
 ```
 
 Validate an existing transcript manifest:
 
 ```sh
-uv run audawispr validate out/transcript.json
+audawispr validate out/transcript.json
 ```
 
 Segment a transcript manifest and write an inspection TSV:
 
 ```sh
-uv run audawispr segment out/transcript.json --output out/segments.json
+audawispr segment out/transcript.json --output out/segments.json
 ```
 
 Enrich a segmented French manifest with IPA:
 
 ```sh
-uv run audawispr enrich out/segments.json --ipa --output out/enriched.json
+audawispr enrich out/segments.json --ipa --output out/enriched.json
 ```
 
 `transcribe` defaults to French, the `small` faster-whisper model, automatic
@@ -119,7 +140,7 @@ implemented in Epic 1.
 Clip audio snippets from a segmented manifest:
 
 ```sh
-uv run audawispr clip out/enriched.json --output out/clipped.json --output-dir out/media
+audawispr clip out/enriched.json --output out/clipped.json --output-dir out/media
 ```
 
 `clip` reads a segmented or enriched manifest, extracts each segment's audio
@@ -131,7 +152,7 @@ re-clip. Padding (`--padding-before-ms`, `--padding-after-ms`), format
 Export a clipped manifest for Anki import:
 
 ```sh
-uv run audawispr export out/clipped.json --format anki-csv --output out/anki-csv
+audawispr export out/clipped.json --format anki-csv --output out/anki-csv
 ```
 
 `export` reads a clipped manifest, copies audio snippets, and writes
@@ -146,7 +167,7 @@ into your Anki collection.media folder.
 Export as a native Anki package (`.apkg`) with embedded audio:
 
 ```sh
-uv run audawispr export out/clipped.json --output deck.apkg --deck-name "My French Deck"
+audawispr export out/clipped.json --output deck.apkg --deck-name "My French Deck"
 ```
 
 When the output path ends in `.apkg`, the `apkg` format is inferred
@@ -166,7 +187,7 @@ uv run ty check src tests
 ## CI
 
 GitHub Actions runs the same quality checks with `uv sync --dev --frozen`.
-Because this is a private repository, the workflow keeps routine pushes cheaper:
+The workflow keeps routine pushes cheaper:
 
 - Ubuntu runs on pushes and pull requests targeting `master`.
 - macOS and Windows run on pull requests targeting `master` and on manual

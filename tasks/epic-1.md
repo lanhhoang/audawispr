@@ -28,11 +28,13 @@ The CI quality workflow must stay green for every phase after Phase 1.
 | 8   | [One-Shot CLI + Python Facade](phase-8.md)           | ✅ Done    |
 | 9   | [Pre-Release Security Audit Remediation](phase-9.md)   | ✅ Done    |
 | 10  | [Correctness & Polish](phase-10.md)                    | ✅ Done    |
-| 11  | [PyPI Publishing Preparation](phase-11.md)            | ⬜ Pending |
+| 11  | [PyPI Publishing Preparation](phase-11.md)            | ✅ Done    |
 
-> **v0.1.0 release is gated on Phases 9 and 10.** Core functionality is
-> complete through Phase 8, but the release will not ship until security
-> remediation and correctness hardening are finished.
+> **v0.1.0 release ready.** All 11 phases complete. Core functionality
+> (Phases 1–8), security remediation (Phase 9), correctness hardening
+> (Phase 10), and PyPI publishing prep (Phase 11) are all verified.
+> Manual prerequisite: configure Trusted Publisher on PyPI
+> (`lanhhoang/audawispr` + `release.yml`) before pushing the `v0.1.0` tag.
 
 ## Epic TODO
 
@@ -46,7 +48,7 @@ The CI quality workflow must stay green for every phase after Phase 1.
 - [x] Phase 8: One-Shot CLI + Python Facade
 - [x] Phase 9: Pre-Release Security Audit Remediation
 - [x] Phase 10: Correctness & Polish
-- [ ] Phase 11: PyPI Publishing Preparation
+- [x] Phase 11: PyPI Publishing Preparation
 
 ## Public Interfaces By End Of Epic
 
