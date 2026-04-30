@@ -10,15 +10,27 @@ from audawispr.core.diagnostics import FFPROBE_ENV, find_media_tool
 from audawispr.core.errors import InputAudioError
 from audawispr.core.manifest import SourceAudio
 
+MAX_AUDIO_SIZE = 5 * 1024 * 1024 * 1024
+
 
 def collect_source_audio_metadata(path: Path, language: str) -> SourceAudio:
     """Collect stable metadata for a source audio file."""
     resolved_path = _validate_audio_path(path)
 
+    size_bytes = resolved_path.stat().st_size
+    if size_bytes >= MAX_AUDIO_SIZE:
+        raise InputAudioError(
+            f"Audio file too large: {size_bytes / (1024**3):.1f} GiB "
+            f"(max {MAX_AUDIO_SIZE / (1024**3):.0f} GiB)"
+        )
+
+    if size_bytes == 0:
+        raise InputAudioError("audio file is empty")
+
     return SourceAudio(
         file_name=resolved_path.name,
         path=str(resolved_path),
-        size_bytes=resolved_path.stat().st_size,
+        size_bytes=size_bytes,
         sha256=_sha256_file(resolved_path),
         language=language,
         duration_seconds=_read_duration_seconds(resolved_path),
@@ -67,6 +79,7 @@ def _read_duration_seconds(path: Path) -> float | None:
         completed = subprocess.run(
             [
                 ffprobe.path,
+                "-nostdin",
                 "-v",
                 "error",
                 "-show_entries",

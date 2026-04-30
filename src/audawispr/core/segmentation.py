@@ -20,7 +20,8 @@ from audawispr.core.manifest import (
 )
 
 TERMINAL_PUNCTUATION = (".", "!", "?", "...")
-SPACE_BEFORE_RE = re.compile(r"\s+([,.;:!?%])")
+_SPACE_BEFORE_ALWAYS = re.compile(r"\s+([,.])")
+_SPACE_BEFORE_NON_FRENCH = re.compile(r"\s+([:;!?%])")
 SPACE_AFTER_OPEN_RE = re.compile(r"([(\[{])\s+")
 TSV_TEXT_WHITESPACE_RE = re.compile(r"[\t\r\n]+")
 TIMING_EPSILON_SECONDS = 1e-9
@@ -74,7 +75,10 @@ def segment_manifest(
             segmentation_options.min_duration_seconds,
             segmentation_options.max_duration_seconds,
         )
-    segments = [_build_segment(index, chunk) for index, chunk in enumerate(chunks)]
+    segments = [
+        _build_segment(index, chunk, manifest.language)
+        for index, chunk in enumerate(chunks)
+    ]
 
     try:
         return TranscriptManifest(
@@ -226,21 +230,25 @@ def _merge_short_chunks(
     return merged
 
 
-def _build_segment(index: int, words: list[TranscriptWord]) -> TranscriptSegment:
+def _build_segment(
+    index: int, words: list[TranscriptWord], language: str | None = None
+) -> TranscriptSegment:
     if not words:
         raise SegmentationError("cannot build an empty segment")
     return TranscriptSegment(
         id=f"seg-{index:04d}",
         start=words[0].start,
         end=words[-1].end,
-        text=_join_words(words),
+        text=_join_words(words, language=language),
         words=words,
     )
 
 
-def _join_words(words: list[TranscriptWord]) -> str:
+def _join_words(words: list[TranscriptWord], language: str | None = None) -> str:
     text = " ".join(word.text.strip() for word in words)
-    text = SPACE_BEFORE_RE.sub(r"\1", text)
+    text = _SPACE_BEFORE_ALWAYS.sub(r"\1", text)
+    if language is None or not language.lower().startswith("fr"):
+        text = _SPACE_BEFORE_NON_FRENCH.sub(r"\1", text)
     return SPACE_AFTER_OPEN_RE.sub(r"\1", text)
 
 

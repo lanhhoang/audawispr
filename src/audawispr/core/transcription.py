@@ -1,4 +1,9 @@
-"""Local transcription pipeline backed by faster-whisper."""
+"""Local transcription pipeline backed by faster-whisper.
+
+Note: ``WhisperModel`` is re-loaded on every ``transcribe()`` call.
+This is acceptable for single-invocation CLI usage but should not be
+used in tight loops.
+"""
 
 from __future__ import annotations
 

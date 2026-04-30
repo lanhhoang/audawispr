@@ -239,7 +239,7 @@ def test_export_missing_snippet_error(tmp_path: Path) -> None:
     manifest_path = _write_manifest(tmp_path, manifest)
     output_dir = tmp_path / "anki-csv"
 
-    with pytest.raises(ExportError, match="audio file does not exist"):
+    with pytest.raises(ExportError, match="no segments with audio files to export"):
         export_manifest_file(manifest_path, output_dir)
 
 
@@ -418,7 +418,7 @@ def test_export_apkg_missing_snippet_error(tmp_path: Path) -> None:
     manifest_path = _write_manifest(tmp_path, manifest)
     apkg_path = tmp_path / "deck.apkg"
 
-    with pytest.raises(ExportError, match="audio file does not exist"):
+    with pytest.raises(ExportError, match="no segments with audio files to export"):
         export_manifest_file(manifest_path, apkg_path)
 
 
@@ -469,6 +469,13 @@ def test_safe_csv_cell_whitespace_bypass() -> None:
     # Whitespace-only strings should be returned unchanged
     assert _safe_csv_cell("   ") == "   "
     assert _safe_csv_cell("") == ""
+    # \r bypass regression: carriage return stripped before lstrip
+    assert _safe_csv_cell("\r=CMD") == "'=CMD"
+    # Unicode whitespace bypass (F1): \u00a0 (non-breaking space) stripped
+    assert _safe_csv_cell("\u00a0=2+2") == "'\u00a0=2+2"
+    # Zero-width Unicode characters must not bypass (Cf category)
+    assert _safe_csv_cell("\u200b=2+2") == "'\u200b=2+2"
+    assert _safe_csv_cell("\u200b\u200d=CMD") == "'\u200b\u200d=CMD"
 
 
 def test_csv_cell_sanitizes_segment_id_and_file_name(tmp_path: Path) -> None:

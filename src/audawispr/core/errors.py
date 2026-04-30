@@ -1,5 +1,7 @@
 """Shared audawispr core exceptions."""
 
+from __future__ import annotations
+
 
 class AudawisprError(Exception):
     """Base class for expected audawispr runtime failures."""
