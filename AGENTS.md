@@ -1,73 +1,40 @@
-# Repository Guidelines
+# audawispr agent guidelines
 
-## Project Structure & Module Organization
+Single-package Python CLI + library. Build system: `hatchling`. Package manager: `uv`.
 
-This repo is currently plan-first. Roadmap and phase details live in `tasks/`,
-with `tasks/epic-1.md` as the main dashboard and `tasks/phase-N.md` files for
-phase-level work.
+## Commands
 
-The planned Python package uses a `src/` layout:
+```sh
+uv sync --dev            # install dev deps (pytest, ruff, ty)
+uv run pytest            # run all tests
+uv run python -m pytest  # fallback if `uv run pytest` fails with ENOENT
+uv run ruff check .      # lint (select: E/F/I/UP/B, line-length 88)
+uv run ruff format --check .
+uv run ty check src tests
+audawispr --help         # after `uv sync`, verifies CLI installed
+audawispr doctor         # checks Python + FFmpeg/FFprobe readiness
+```
 
-- `src/audawispr/`: package source and Typer CLI entrypoint
-- `src/audawispr/core/`: reusable transcription, segmentation, enrichment,
-  clipping, export, manifest, and pipeline logic
-- `tests/`: pytest tests and fixtures
-- `README.md`: user-facing setup and command documentation
+Commit-triggered CI runs the same four checks (tests, lint, format, typecheck) on Linux, macOS, Windows.
 
-## Build, Test, and Development Commands
+## CLI quirk
 
-After Phase 1 scaffolding, use:
+The CLI uses `_OneShotFallbackGroup` — unknown positional args auto-route to the hidden `_oneshot` command. So `audawispr lesson.mp3 --output deck.apkg` works without a subcommand.
 
-- `uv sync --dev`: install runtime and development dependencies.
-- `uv run audawispr --help`: verify the CLI is installed.
-- `uv run audawispr doctor`: check Python and FFmpeg/FFprobe readiness.
-- `uv run pytest`: run the test suite.
-- `uv run ruff check .`: run lint checks.
-- `uv run ruff format --check .`: verify formatting.
-- `uv run ty check src tests`: run type checks.
+## Architecture
 
-CI must run tests, lint, format check, and typecheck on Linux, macOS, and
-Windows.
+- **Entrypoint**: `src/audawispr/cli.py` (Typer app), wire-up in `pyproject.toml: [project.scripts] audawispr = "audawispr.cli:app"`
+- **Public API**: `audawispr.Pipeline` — wraps the full pipeline (`__init__.py` re-exports it + 10 exception classes)
+- **Modules**: `core/` has one file per pipeline stage (`transcription.py`, `segmentation.py`, `enrichment.py`, `clipping.py`, `export.py`) + shared models (`manifest.py`) + errors (`errors.py`) + diagnostics (`diagnostics.py`)
+- **Version**: single source in `src/audawispr/__about__.py`
 
-## Coding Style & Naming Conventions
+## Testing
 
-Target Python 3.11+. Use 4-space indentation, type hints, and `Path` for
-filesystem values. Keep filesystem/process code cross-platform for macOS, Linux,
-and Windows.
+- Pytest, no conftest plugins beyond default. Test files: `tests/test_*.py`.
+- Heavy operations (Whisper model download, real FFmpeg) must be mocked in CI. Focus tests on manifest validation, CLI behavior, path handling, error paths.
 
-Use `snake_case` for functions, modules, and variables. Use `PascalCase` for
-classes. Prefer clear dataclasses or Pydantic models for structured data.
+## Notable
 
-Do not register visible CLI commands before their phase implements them.
-
-## Testing Guidelines
-
-Use pytest. Test files should be named `tests/test_*.py`, and test functions
-should be named `test_*`.
-
-Keep heavyweight behavior mocked in normal CI: Whisper model downloads and real
-FFmpeg smoke tests should not be required for the default test suite. Add
-focused tests for manifest validation, CLI behavior, cross-platform path
-handling, and error paths.
-
-## Commit & Pull Request Guidelines
-
-Follow the existing commit style, for example:
-
-- `docs: update task documentation for phases 1-8`
-- `feat: initialize project structure`
-- `chore: add segments.json to gitignore`
-- `refactor: reorganize implementation plan`
-
-Keep commits scoped to one logical change. Pull requests should include a short
-summary, linked task or phase, verification commands run, and any skipped checks
-with reasons.
-
-## Security & Configuration Tips
-
-Do not commit generated manifests, audio snippets, APKG files, model caches,
-virtual environments, or machine-specific paths.
-
-Use `AUDAWISPR_FFMPEG` and `AUDAWISPR_FFPROBE` for explicit FFmpeg tool paths.
-Network translation providers are out of scope for Epic 1 unless a later plan
-adds them.
+- `static-ffmpeg` is a Python dependency — FFmpeg binaries bundled via pip. Override with `AUDAWISPR_FFMPEG` / `AUDAWISPR_FPROBE` env vars.
+- Release workflow uses Trusted Publisher OIDC (`pypa/gh-action-pypi-publish@release/v1`, `permissions: id-token: write`) — no API token.
+- onnxruntime macOS Intel is pinned to v1.23.2 (last x86_64 wheel). Apple Silicon gets latest. Both satisfy `>=1.22.1,<2.0`.

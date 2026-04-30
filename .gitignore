@@ -241,3 +241,5 @@ cards.csv
 models/
 whisper-cache/
 faster-whisper-cache/
+
+tasks/
