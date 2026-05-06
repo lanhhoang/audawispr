@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -10,9 +11,14 @@ import typer.core
 
 from audawispr.__about__ import __version__
 from audawispr.core.clipping import ClipOptions, clip_manifest_file
-from audawispr.core.diagnostics import collect_diagnostics
+from audawispr.core.diagnostics import collect_diagnostics, install_ffmpeg
 from audawispr.core.enrichment import EnrichmentOptions, enrich_manifest_file
-from audawispr.core.errors import AudawisprError, ClippingError, ExportError
+from audawispr.core.errors import (
+    AudawisprError,
+    ClippingError,
+    DependencyError,
+    ExportError,
+)
 from audawispr.core.export import ExportOptions, export_manifest_file
 from audawispr.core.manifest import load_manifest, save_manifest
 from audawispr.core.segmentation import (
@@ -91,6 +97,64 @@ def doctor() -> None:
             typer.echo(f"  version: {tool.version}")
         if tool.message:
             typer.echo(f"  note: {tool.message}")
+
+
+@app.command("install-ffmpeg")
+def install_ffmpeg_command(
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Re-download even if already installed.",
+    ),
+    prefer_system: bool = typer.Option(
+        True,
+        "--prefer-system/--no-prefer-system",
+        help="Skip install if system FFmpeg is available (default: prefer).",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable JSON output.",
+    ),
+) -> None:
+    """Install audawispr-managed FFmpeg and FFprobe binaries."""
+    try:
+        result = install_ffmpeg(prefer_system=prefer_system, force=force)
+    except AudawisprError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    if json_output:
+        typer.echo(
+            json.dumps(
+                {
+                    "installed": result.installed,
+                    "source": result.source,
+                    "cache_dir": result.cache_dir,
+                    "ffmpeg": {
+                        "found": result.ffmpeg.available,
+                        "path": result.ffmpeg.path,
+                        "version": result.ffmpeg.version,
+                    },
+                    "ffprobe": {
+                        "found": result.ffprobe.available,
+                        "path": result.ffprobe.path,
+                        "version": result.ffprobe.version,
+                    },
+                },
+                indent=2,
+            )
+        )
+    else:
+        verb = "installed" if result.installed else "using existing"
+        typer.echo(f"{verb}: {result.ffmpeg.path}")
+        typer.echo(f"source: {result.source}")
+        typer.echo(f"cache_dir: {result.cache_dir}")
+        typer.echo(f"ffmpeg: {result.ffmpeg.version or result.ffmpeg.path}")
+        typer.echo(f"ffprobe: {result.ffprobe.version or result.ffprobe.path}")
+
+    if not result.ffmpeg.available or not result.ffprobe.available:
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -366,7 +430,7 @@ def clip(
             force=force,
         )
         clip_manifest_file(manifest, output, output_dir, options)
-    except ClippingError as exc:
+    except (ClippingError, DependencyError) as exc:
         _fail(str(exc))
 
     typer.echo(f"Wrote clipped manifest: {output}")

@@ -1,6 +1,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 from audawispr.core import diagnostics
 from audawispr.core.errors import AudawisprError, DependencyError
 
@@ -264,3 +266,130 @@ def test_collect_diagnostics_includes_new_fields(monkeypatch):
     report = diagnostics.collect_diagnostics()
     assert report.platform_key != ""
     assert report.cache_dir != ""
+
+
+# --- install_ffmpeg ---
+
+
+def test_install_ffmpeg_downloads_when_missing(monkeypatch, tmp_path):
+    """Full download when no system ffmpeg and no cache."""
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setenv("AUDAWISPR_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setattr(diagnostics, "shutil", _ShutilWhichNone())
+    monkeypatch.setattr(diagnostics, "_find_cached_ffmpeg_tool", lambda _: (None, None))
+
+    # Mock static-ffmpeg to return fake paths
+    monkeypatch.setattr(
+        "static_ffmpeg.run.get_or_fetch_platform_executables_else_raise",
+        lambda *a, **kw: ("/bin/fake-ffmpeg", "/bin/fake-ffprobe"),
+    )
+
+    # Mock copy_ffmpeg_to_cache to create real files for _status_for_path
+    def fake_copy(ffmpeg_src, ffprobe_src, *, cache_dir):
+        bin_dir = cache_dir / "ffmpeg" / "bin" / "linux"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        f = bin_dir / "ffmpeg"
+        f.write_text("fake")
+        f.chmod(0o755)
+        p = bin_dir / "ffprobe"
+        p.write_text("fake")
+        p.chmod(0o755)
+        return (f, p)
+
+    monkeypatch.setattr(diagnostics, "copy_ffmpeg_to_cache", fake_copy)
+
+    # Mock _read_tool_version to pass _status_for_path
+    monkeypatch.setattr(
+        diagnostics,
+        "_read_tool_version",
+        lambda _: ("ffmpeg version test", None),
+    )
+
+    result = diagnostics.install_ffmpeg()
+
+    assert result.installed is True
+    assert result.source == "audawispr-cache"
+    assert result.ffmpeg.available is True
+
+
+class _ShutilWhichNone:
+    """Stand-in for shutil with which() always returning None."""
+
+    @staticmethod
+    def which(name: str) -> None:
+        return None
+
+
+def test_install_ffmpeg_skips_when_system_found(monkeypatch, tmp_path):
+    """System ffmpeg found with prefer_system=True — skip install."""
+    monkeypatch.setenv("AUDAWISPR_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setattr(diagnostics, "_find_cached_ffmpeg_tool", lambda _: (None, None))
+
+    # Create a fake system ffmpeg path
+    system_ffmpeg = tmp_path / "system-ffmpeg"
+    system_ffmpeg.write_text("")
+    system_ffmpeg.chmod(0o755)
+    system_ffprobe = tmp_path / "system-ffprobe"
+    system_ffprobe.write_text("")
+    system_ffprobe.chmod(0o755)
+
+    # Mock shutil.which to return our fake paths
+    def fake_which(name: str) -> str | None:
+        if name == "ffmpeg":
+            return str(system_ffmpeg)
+        if name == "ffprobe":
+            return str(system_ffprobe)
+        return None
+
+    monkeypatch.setattr(diagnostics.shutil, "which", fake_which)
+
+    # Mock _read_tool_version to pass validation
+    monkeypatch.setattr(
+        diagnostics,
+        "_read_tool_version",
+        lambda _: ("ffmpeg version test", None),
+    )
+
+    result = diagnostics.install_ffmpeg()
+
+    assert result.installed is False
+    assert result.source == "system"
+    assert result.ffmpeg.available is True
+
+
+def test_install_ffmpeg_raises_on_network_failure(monkeypatch, tmp_path):
+    """Network failure during download raises DependencyError."""
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setenv("AUDAWISPR_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setattr(diagnostics, "_find_cached_ffmpeg_tool", lambda _: (None, None))
+
+    # Mock static-ffmpeg to fail
+    def fake_fail(*a, **kw):
+        raise ConnectionError("Network is unreachable")
+
+    monkeypatch.setattr(
+        "static_ffmpeg.run.get_or_fetch_platform_executables_else_raise",
+        fake_fail,
+    )
+
+    with pytest.raises(DependencyError, match="Failed to download"):
+        diagnostics.install_ffmpeg()
+
+
+def test_install_ffmpeg_raises_on_unsupported_platform(monkeypatch, tmp_path):
+    """Unsupported platform raises DependencyError."""
+    monkeypatch.setenv("AUDAWISPR_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setattr(diagnostics, "_find_cached_ffmpeg_tool", lambda _: (None, None))
+    monkeypatch.setattr(diagnostics, "_find_static_ffmpeg_tool", lambda _: (None, None))
+
+    # Mock static-ffmpeg to fail with platform error
+    def fake_platform_error(*a, **kw):
+        raise OSError("Please implement static_ffmpeg for freebsd")
+
+    monkeypatch.setattr(
+        "static_ffmpeg.run.get_or_fetch_platform_executables_else_raise",
+        fake_platform_error,
+    )
+
+    with pytest.raises(DependencyError, match="not available for your platform"):
+        diagnostics.install_ffmpeg(prefer_system=False)

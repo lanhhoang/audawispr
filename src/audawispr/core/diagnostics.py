@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import os
 import platform as _platform
 import shutil
+import stat
 import subprocess
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from audawispr.__about__ import __version__
@@ -84,7 +87,7 @@ def find_media_tool(
     *,
     which: Callable[[str], str | None] = shutil.which,
 ) -> ToolStatus:
-    """Find a media binary from env vars, PATH, or static-ffmpeg."""
+    """Find a media binary from env vars, PATH, audawispr cache, or static-ffmpeg."""
     explicit_path = os.environ.get(env_var)
     if explicit_path:
         return _status_for_path(name, Path(explicit_path), f"{env_var}")
@@ -93,11 +96,22 @@ def find_media_tool(
     if path_tool is not None:
         return _status_for_path(name, Path(path_tool), "PATH")
 
-    static_tool, static_message = _find_static_ffmpeg_tool(name)
-    if static_tool is not None:
-        return _status_for_path(name, static_tool, "static-ffmpeg")
+    cached_tool, static_message = _find_cached_ffmpeg_tool(name)
+    if cached_tool is not None:
+        # Determine actual source — cache or static-ffmpeg fallback
+        cache_dir = get_cache_dir()
+        platform_key = detect_platform_key()
+        cache_prefix = cache_dir / "ffmpeg" / "bin" / platform_key
+        source = (
+            "audawispr-cache"
+            if str(cached_tool).startswith(str(cache_prefix))
+            else "static-ffmpeg"
+        )
+        return _status_for_path(name, cached_tool, source)
 
-    message = "not found in environment variable, PATH, or static-ffmpeg"
+    message = (
+        "not found in environment variable, PATH, audawispr cache, or static-ffmpeg"
+    )
     if static_message:
         message = f"{message}; static-ffmpeg: {static_message}"
     return ToolStatus(name=name, available=False, source="missing", message=message)
@@ -187,6 +201,214 @@ def _find_static_ffmpeg_tool(name: str) -> tuple[Path | None, str | None]:
         return static_path, None
 
     return None, f"{static_path} is unavailable"
+
+
+def _find_cached_ffmpeg_tool(name: str) -> tuple[Path | None, str | None]:
+    """Check audawispr shared cache, then static-ffmpeg venv dir."""
+    cache_dir = get_cache_dir()
+    platform_key = detect_platform_key()
+    executable_name = f"{name}.exe" if sys.platform == "win32" else name
+    cache_path = cache_dir / "ffmpeg" / "bin" / platform_key / executable_name
+    if cache_path.exists():
+        return cache_path, None
+    return _find_static_ffmpeg_tool(name)
+
+
+def copy_ffmpeg_to_cache(
+    ffmpeg_src: Path,
+    ffprobe_src: Path,
+    *,
+    cache_dir: Path,
+) -> tuple[Path, Path]:
+    """Copy binaries to audawispr shared cache dir, set executable bits."""
+    platform_key = detect_platform_key()
+    bin_dir = cache_dir / "ffmpeg" / "bin" / platform_key
+    bin_dir.mkdir(parents=True, exist_ok=True)
+
+    def _exe_name(name: str) -> str:
+        return f"{name}.exe" if sys.platform == "win32" else name
+
+    ffmpeg_dst = bin_dir / _exe_name("ffmpeg")
+    ffprobe_dst = bin_dir / _exe_name("ffprobe")
+
+    shutil.copy2(ffmpeg_src, ffmpeg_dst)
+    shutil.copy2(ffprobe_src, ffprobe_dst)
+
+    if sys.platform != "win32":
+        mode = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        ffmpeg_dst.chmod(ffmpeg_dst.stat().st_mode | mode)
+        ffprobe_dst.chmod(ffprobe_dst.stat().st_mode | mode)
+
+    return ffmpeg_dst, ffprobe_dst
+
+
+def _write_cache_metadata(
+    *,
+    ffmpeg_status: ToolStatus,
+    ffprobe_status: ToolStatus,
+    cache_dir: Path,
+) -> None:
+    """Write metadata.json to the FFmpeg cache directory."""
+    metadata = {
+        "platform_key": detect_platform_key(),
+        "installed_at": datetime.now(UTC).isoformat(),
+        "ffmpeg": {
+            "path": ffmpeg_status.path,
+            "version": ffmpeg_status.version,
+        },
+        "ffprobe": {
+            "path": ffprobe_status.path,
+            "version": ffprobe_status.version,
+        },
+    }
+    meta_path = cache_dir / "ffmpeg" / "metadata.json"
+    meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+
+def install_ffmpeg(
+    *,
+    prefer_system: bool = True,
+    force: bool = False,
+) -> FFmpegInstallResult:
+    """Download FFmpeg/FFprobe via static-ffmpeg, copy to audawispr shared cache.
+
+    Behavior:
+      - System FFmpeg + prefer_system=True → skip, source="system"
+      - Cache exists + force=False          → skip, source="audawispr-cache"
+      - Otherwise                           → download + copy to cache
+
+    Raises: DependencyError on unsupported platform, network failure, or corrupt ZIP.
+    """
+    from audawispr.core.errors import DependencyError
+
+    cache_dir = get_cache_dir()
+    platform_key = detect_platform_key()
+
+    # Check system FFmpeg
+    if prefer_system:
+        system_ffmpeg = shutil.which("ffmpeg")
+        system_ffprobe = shutil.which("ffprobe")
+        if system_ffmpeg and system_ffprobe:
+            ffmpeg_s = _status_for_path("ffmpeg", Path(system_ffmpeg), "system")
+            ffprobe_s = _status_for_path("ffprobe", Path(system_ffprobe), "system")
+            return FFmpegInstallResult(
+                ffmpeg=ffmpeg_s,
+                ffprobe=ffprobe_s,
+                installed=False,
+                cache_dir=str(cache_dir),
+                platform_key=platform_key,
+                source="system",
+            )
+
+    # Check audawispr cache
+    if not force:
+        cached_ffmpeg, _ = _find_cached_ffmpeg_tool("ffmpeg")
+        cached_ffprobe, _ = _find_cached_ffmpeg_tool("ffprobe")
+        if cached_ffmpeg and cached_ffprobe:
+            ffmpeg_s = _status_for_path("ffmpeg", cached_ffmpeg, "audawispr-cache")
+            ffprobe_s = _status_for_path("ffprobe", cached_ffprobe, "audawispr-cache")
+            if ffmpeg_s.available and ffprobe_s.available:
+                return FFmpegInstallResult(
+                    ffmpeg=ffmpeg_s,
+                    ffprobe=ffprobe_s,
+                    installed=False,
+                    cache_dir=str(cache_dir),
+                    platform_key=platform_key,
+                    source="audawispr-cache",
+                )
+
+    # Download via static-ffmpeg
+    try:
+        from static_ffmpeg import run
+    except ImportError as exc:
+        raise DependencyError(
+            "static-ffmpeg is required to install FFmpeg binaries. "
+            "Run `uv sync` to install dependencies."
+        ) from exc
+
+    try:
+        ffmpeg_path, ffprobe_path = run.get_or_fetch_platform_executables_else_raise()
+    except OSError as exc:
+        if "implement" in str(exc):
+            raise DependencyError(
+                f"FFmpeg is not available for your platform ({platform_key}). "
+                f"Set {FFMPEG_ENV} to use a custom binary."
+            ) from exc
+        raise DependencyError(f"Failed to download FFmpeg binaries: {exc}") from exc
+    except Exception as exc:
+        raise DependencyError(f"Failed to download FFmpeg binaries: {exc}") from exc
+
+    # Copy to audawispr shared cache
+    cached_paths = copy_ffmpeg_to_cache(
+        Path(ffmpeg_path),
+        Path(ffprobe_path),
+        cache_dir=cache_dir,
+    )
+
+    # Build result
+    ffmpeg_s = _status_for_path("ffmpeg", cached_paths[0], "audawispr-cache")
+    ffprobe_s = _status_for_path("ffprobe", cached_paths[1], "audawispr-cache")
+
+    _write_cache_metadata(
+        ffmpeg_status=ffmpeg_s,
+        ffprobe_status=ffprobe_s,
+        cache_dir=cache_dir,
+    )
+
+    if not ffmpeg_s.available or not ffprobe_s.available:
+        raise DependencyError(
+            f"Installed FFmpeg binaries could not be verified. "
+            f"ffmpeg={'ok' if ffmpeg_s.available else 'MISSING'} at {cached_paths[0]}, "
+            f"ffprobe={'ok' if ffprobe_s.available else 'MISSING'} at {cached_paths[1]}"
+        )
+
+    return FFmpegInstallResult(
+        ffmpeg=ffmpeg_s,
+        ffprobe=ffprobe_s,
+        installed=True,
+        cache_dir=str(cache_dir),
+        platform_key=platform_key,
+        source="audawispr-cache",
+    )
+
+
+def ensure_ffmpeg() -> Path:
+    """Find ffmpeg, auto-installing via static-ffmpeg if needed.
+
+    Resolution: AUDAWISPR_FFMPEG → PATH → audawispr cache → static-ffmpeg install.
+
+    Returns: Absolute path to ffmpeg executable.
+    Raises: DependencyError if ffmpeg cannot be found or installed.
+    """
+    from audawispr.core.errors import DependencyError
+
+    env_path = os.environ.get(FFMPEG_ENV)
+    if env_path:
+        p = Path(env_path)
+        if p.is_file():
+            return p
+        if p.exists():
+            raise DependencyError(f"{FFMPEG_ENV}={env_path} is not a regular file")
+        raise DependencyError(
+            f"{FFMPEG_ENV}={env_path} does not exist. "
+            f"Unset the variable or point it to a valid FFmpeg binary."
+        )
+
+    which_ffmpeg = shutil.which("ffmpeg")
+    if which_ffmpeg:
+        return Path(which_ffmpeg)
+
+    cached, _ = _find_cached_ffmpeg_tool("ffmpeg")
+    if cached:
+        return cached
+
+    result = install_ffmpeg()
+    if not result.ffmpeg.available or result.ffmpeg.path is None:
+        raise DependencyError(
+            f"FFmpeg could not be installed. "
+            f"Install manually or set {FFMPEG_ENV} to point to an FFmpeg binary."
+        )
+    return Path(result.ffmpeg.path)
 
 
 CACHE_DIR_ENV = "AUDAWISPR_CACHE_DIR"

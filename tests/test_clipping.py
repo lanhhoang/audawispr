@@ -9,7 +9,7 @@ from audawispr.core.clipping import (
     safe_segment_id,
     stable_snippet_filename,
 )
-from audawispr.core.errors import ClippingError
+from audawispr.core.errors import ClippingError, DependencyError
 from audawispr.core.manifest import (
     SourceAudio,
     TranscriptionSettings,
@@ -119,16 +119,12 @@ def test_clip_manifest_raises_when_ffmpeg_missing(
     output_manifest = tmp_path / "clipped.json"
     output_dir = tmp_path / "media"
 
-    from audawispr.core.diagnostics import ToolStatus
-
     monkeypatch.setattr(
-        "audawispr.core.clipping.find_media_tool",
-        lambda name, env_var, **kw: ToolStatus(
-            name="ffmpeg", available=False, source="missing"
-        ),
+        "audawispr.core.clipping.ensure_ffmpeg",
+        lambda: (_ for _ in ()).throw(DependencyError("ffmpeg not available")),
     )
 
-    with pytest.raises(ClippingError, match="FFmpeg is not available"):
+    with pytest.raises(DependencyError, match="ffmpeg not available"):
         clip_manifest_file(manifest_path, output_manifest, output_dir)
 
 
@@ -150,16 +146,9 @@ def test_clip_manifest_raises_on_ffmpeg_failure(
     output_manifest = tmp_path / "clipped.json"
     output_dir = tmp_path / "media"
 
-    from audawispr.core.diagnostics import ToolStatus
-
     monkeypatch.setattr(
-        "audawispr.core.clipping.find_media_tool",
-        lambda name, env_var, **kw: ToolStatus(
-            name="ffmpeg",
-            available=True,
-            source="PATH",
-            path="/usr/bin/fake-ffmpeg",
-        ),
+        "audawispr.core.clipping.ensure_ffmpeg",
+        lambda: Path("/usr/bin/fake-ffmpeg"),
     )
 
     def fake_run(*args: object, **kwargs: object) -> object:
@@ -186,16 +175,9 @@ def test_clip_manifest_raises_on_empty_snippet(
     output_dir = tmp_path / "media"
     output_dir.mkdir()
 
-    from audawispr.core.diagnostics import ToolStatus
-
     monkeypatch.setattr(
-        "audawispr.core.clipping.find_media_tool",
-        lambda name, env_var, **kw: ToolStatus(
-            name="ffmpeg",
-            available=True,
-            source="PATH",
-            path="/usr/bin/fake-ffmpeg",
-        ),
+        "audawispr.core.clipping.ensure_ffmpeg",
+        lambda: Path("/usr/bin/fake-ffmpeg"),
     )
 
     def fake_run(*args: object, **kwargs: object) -> object:
@@ -218,16 +200,9 @@ def test_clip_manifest_raises_on_negative_duration_after_padding(
     source = _make_source_audio(tmp_path)
     output_manifest = tmp_path / "clipped.json"
 
-    from audawispr.core.diagnostics import ToolStatus
-
     monkeypatch.setattr(
-        "audawispr.core.clipping.find_media_tool",
-        lambda name, env_var, **kw: ToolStatus(
-            name="ffmpeg",
-            available=True,
-            source="PATH",
-            path="/usr/bin/fake-ffmpeg",
-        ),
+        "audawispr.core.clipping.ensure_ffmpeg",
+        lambda: Path("/usr/bin/fake-ffmpeg"),
     )
 
     bad_manifest = TranscriptManifest(
@@ -297,16 +272,9 @@ def test_clip_manifest_padding_bounded_by_duration(
     output_dir = tmp_path / "media"
     output_dir.mkdir()
 
-    from audawispr.core.diagnostics import ToolStatus
-
     monkeypatch.setattr(
-        "audawispr.core.clipping.find_media_tool",
-        lambda name, env_var, **kw: ToolStatus(
-            name="ffmpeg",
-            available=True,
-            source="PATH",
-            path="/usr/bin/fake-ffmpeg",
-        ),
+        "audawispr.core.clipping.ensure_ffmpeg",
+        lambda: Path("/usr/bin/fake-ffmpeg"),
     )
 
     captured_args: list[list[str]] = []
@@ -351,16 +319,9 @@ def test_clip_manifest_skips_existing_snippets_without_force(
     (output_dir / "0000_seg-0000.mp3").write_bytes(b"data")
     (output_dir / "0001_seg-0001.mp3").write_bytes(b"data")
 
-    from audawispr.core.diagnostics import ToolStatus
-
     monkeypatch.setattr(
-        "audawispr.core.clipping.find_media_tool",
-        lambda name, env_var, **kw: ToolStatus(
-            name="ffmpeg",
-            available=True,
-            source="PATH",
-            path="/usr/bin/fake-ffmpeg",
-        ),
+        "audawispr.core.clipping.ensure_ffmpeg",
+        lambda: Path("/usr/bin/fake-ffmpeg"),
     )
 
     call_count = 0
@@ -395,16 +356,9 @@ def test_clip_manifest_writes_manifest_with_audio_files(
     output_manifest = tmp_path / "clipped.json"
     output_dir = tmp_path / "media"
 
-    from audawispr.core.diagnostics import ToolStatus
-
     monkeypatch.setattr(
-        "audawispr.core.clipping.find_media_tool",
-        lambda name, env_var, **kw: ToolStatus(
-            name="ffmpeg",
-            available=True,
-            source="PATH",
-            path="/usr/bin/fake-ffmpeg",
-        ),
+        "audawispr.core.clipping.ensure_ffmpeg",
+        lambda: Path("/usr/bin/fake-ffmpeg"),
     )
 
     snippet_files: list[Path] = []
@@ -444,16 +398,9 @@ def test_clip_manifest_force_reclips_existing(
     (output_dir / "0000_seg-0000.mp3").write_bytes(b"data")
     (output_dir / "0001_seg-0001.mp3").write_bytes(b"data")
 
-    from audawispr.core.diagnostics import ToolStatus
-
     monkeypatch.setattr(
-        "audawispr.core.clipping.find_media_tool",
-        lambda name, env_var, **kw: ToolStatus(
-            name="ffmpeg",
-            available=True,
-            source="PATH",
-            path="/usr/bin/fake-ffmpeg",
-        ),
+        "audawispr.core.clipping.ensure_ffmpeg",
+        lambda: Path("/usr/bin/fake-ffmpeg"),
     )
 
     call_count = 0
@@ -580,16 +527,9 @@ def test_clip_incremental_manifest_save(
     output_dir = tmp_path / "media"
     output_dir.mkdir()
 
-    from audawispr.core.diagnostics import ToolStatus
-
     monkeypatch.setattr(
-        "audawispr.core.clipping.find_media_tool",
-        lambda name, env_var, **kw: ToolStatus(
-            name="ffmpeg",
-            available=True,
-            source="PATH",
-            path="/usr/bin/fake-ffmpeg",
-        ),
+        "audawispr.core.clipping.ensure_ffmpeg",
+        lambda: Path("/usr/bin/fake-ffmpeg"),
     )
 
     call_count: int = 0

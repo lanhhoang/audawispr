@@ -607,5 +607,16 @@ def _make_manifest_with_words(
     )
 
 
+def test_install_ffmpeg_help() -> None:
+    """install-ffmpeg --help shows expected options."""
+    result = runner.invoke(app, ["install-ffmpeg", "--help"])
+    output = _normalize_terminal_output(result.stdout)
+
+    assert result.exit_code == 0
+    assert "--force" in output
+    assert "--prefer-system" in output
+    assert "--json" in output
+
+
 def _normalize_terminal_output(output: str) -> str:
     return ANSI_ESCAPE_RE.sub("", output)
