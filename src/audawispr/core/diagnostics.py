@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import platform as _platform
 import shutil
 import subprocess
 import sys
@@ -29,19 +30,47 @@ class ToolStatus:
 
 
 @dataclass(frozen=True)
+class WhisperModelStatus:
+    """Cache status for a specific Whisper model size."""
+
+    cached: bool
+    model_size: str
+    cache_path: str | None = None
+    message: str | None = None
+
+
+@dataclass(frozen=True)
+class FFmpegInstallResult:
+    """Result of an FFmpeg/FFprobe installation attempt."""
+
+    ffmpeg: ToolStatus
+    ffprobe: ToolStatus
+    installed: bool
+    cache_dir: str
+    platform_key: str
+    source: str
+
+
+@dataclass(frozen=True)
 class DiagnosticsReport:
     """Current local runtime readiness report."""
 
     package_version: str
     python_version: str
-    tools: tuple[ToolStatus, ...]
+    platform_key: str = ""
+    cache_dir: str = ""
+    ffmpeg_cache_dir: str | None = None
+    tools: tuple[ToolStatus, ...] = ()
+    whisper: WhisperModelStatus | None = None
 
 
 def collect_diagnostics() -> DiagnosticsReport:
-    """Collect local package, Python, FFmpeg, and FFprobe readiness."""
+    """Collect local package, Python, FFmpeg, FFprobe, and Whisper readiness."""
     return DiagnosticsReport(
         package_version=__version__,
         python_version=sys.version.split()[0],
+        platform_key=detect_platform_key(),
+        cache_dir=str(get_cache_dir()),
         tools=(
             find_media_tool("ffmpeg", FFMPEG_ENV),
             find_media_tool("ffprobe", FFPROBE_ENV),
@@ -158,3 +187,60 @@ def _find_static_ffmpeg_tool(name: str) -> tuple[Path | None, str | None]:
         return static_path, None
 
     return None, f"{static_path} is unavailable"
+
+
+CACHE_DIR_ENV = "AUDAWISPR_CACHE_DIR"
+
+
+def _safe_home() -> Path:
+    """Return Path.home() with a fallback for restricted environments."""
+    try:
+        return Path.home()
+    except RuntimeError:
+        return Path(os.environ.get("HOME", "/tmp"))
+
+
+def get_cache_dir() -> Path:
+    """Platform-appropriate audawispr cache directory.
+
+    Override with ``AUDAWISPR_CACHE_DIR`` env var.
+    macOS: ``~/Library/Caches/audawispr``
+    Linux: ``~/.cache/audawispr``
+    Windows: ``%LOCALAPPDATA%/audawispr/cache``
+
+    An empty value for any env var is treated as unset and falls through
+    to the platform default.
+    """
+    if override := os.environ.get(CACHE_DIR_ENV):
+        path = Path(override).expanduser().resolve()
+        if not path.is_dir() and path.suffix:
+            path = path.parent
+        return path
+    home = _safe_home()
+    if sys.platform == "darwin":
+        return home / "Library" / "Caches" / "audawispr"
+    if sys.platform == "win32":
+        root = os.environ.get("LOCALAPPDATA") or str(home / "AppData" / "Local")
+        return Path(root) / "audawispr" / "cache"
+    root = os.environ.get("XDG_CACHE_HOME") or str(home / ".cache")
+    return Path(root) / "audawispr"
+
+
+def detect_platform_key() -> str:
+    """Static-ffmpeg compatible platform key.
+
+    Returns: ``"darwin_arm64"``, ``"darwin"``, ``"linux"``,
+    ``"linux_arm64"``, ``"win32"``, or the raw ``sys.platform`` value.
+
+    ``"linux"`` is returned for all non-ARM Linux architectures
+    (including x86_64, i686, and armv7l).
+    """
+    if sys.platform == "win32":
+        return "win32"
+    machine = _platform.machine().lower()
+    is_arm = machine in {"arm64", "aarch64"}
+    if sys.platform == "darwin":
+        return "darwin_arm64" if is_arm else "darwin"
+    if sys.platform == "linux":
+        return "linux_arm64" if is_arm else "linux"
+    return sys.platform
