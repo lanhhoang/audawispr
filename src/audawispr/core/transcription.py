@@ -7,6 +7,7 @@ used in tight loops.
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, SupportsFloat, SupportsIndex
@@ -14,13 +15,51 @@ from typing import Any, Protocol, SupportsFloat, SupportsIndex
 from pydantic import ValidationError
 
 from audawispr.core.audio import collect_source_audio_metadata
-from audawispr.core.errors import TranscriptionError
+from audawispr.core.errors import DependencyError, TranscriptionError
 from audawispr.core.manifest import (
     TranscriptionSettings,
     TranscriptManifest,
     TranscriptSegment,
     TranscriptWord,
 )
+
+_WHISPER_MODEL_SIZES: dict[str, str] = {
+    "tiny.en": "Systran/faster-whisper-tiny.en",
+    "tiny": "Systran/faster-whisper-tiny",
+    "base.en": "Systran/faster-whisper-base.en",
+    "base": "Systran/faster-whisper-base",
+    "small.en": "Systran/faster-whisper-small.en",
+    "small": "Systran/faster-whisper-small",
+    "medium.en": "Systran/faster-whisper-medium.en",
+    "medium": "Systran/faster-whisper-medium",
+    "large-v1": "Systran/faster-whisper-large-v1",
+    "large-v2": "Systran/faster-whisper-large-v2",
+    "large-v3": "Systran/faster-whisper-large-v3",
+    "large": "Systran/faster-whisper-large-v3",
+    "distil-large-v2": "Systran/faster-distil-whisper-large-v2",
+    "distil-medium.en": "Systran/faster-distil-whisper-medium.en",
+    "distil-small.en": "Systran/faster-distil-whisper-small.en",
+    "distil-large-v3": "Systran/faster-distil-whisper-large-v3",
+    "distil-large-v3.5": "distil-whisper/distil-large-v3.5-ct2",
+    "large-v3-turbo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
+    "turbo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
+}
+
+
+_WHISPER_ALLOW_PATTERNS: list[str] = [
+    "config.json",
+    "preprocessor_config.json",
+    "model.bin",
+    "tokenizer.json",
+    "vocabulary.*",
+]
+# Matches faster-whisper's own download_model() allow_patterns exactly.
+# Keep in sync with faster_whisper.utils._MODELS if upstream adds new file types.
+
+
+WHISPER_VALID_SIZES: frozenset[str] = frozenset(_WHISPER_MODEL_SIZES)
+
+_HF_CACHE_INDICATOR = ".cache/huggingface"
 
 
 @dataclass(frozen=True)
@@ -151,3 +190,93 @@ def _optional_float(
     if value is None:
         return None
     return float(value)
+
+
+def download_whisper_model(
+    model_size: str,
+    *,
+    cache_dir: str | None = None,
+    force: bool = False,
+) -> str:
+    """Pre-download a Whisper model from HuggingFace Hub with progress bars.
+
+    Uses ``huggingface_hub.snapshot_download()`` directly to get real download
+    progress (faster-whisper's own ``download_model()`` suppresses progress via
+    ``disabled_tqdm``).
+
+    When ``force=False`` (default), returns the cached path immediately if the
+    model is already in the local HuggingFace cache — no network access.
+    When ``force=True``, any locally cached snapshot is deleted before
+    downloading a fresh copy.
+
+    Args:
+        model_size: Model size alias (e.g. ``"small"``, ``"medium"``, ``"large-v3"``)
+            or a HuggingFace repo ID (e.g. ``"Systran/faster-whisper-small"``).
+        cache_dir: Override the default HuggingFace cache directory.
+        force: Re-download even if the model is already cached.
+
+    Returns:
+        Absolute path to the cached model directory.
+
+    Raises:
+        DependencyError: On download failure (network, disk, auth).
+        ValueError: If ``model_size`` is not a recognized alias and not a repo ID.
+    """
+    # Resolve size alias → HuggingFace repo ID
+    if "/" in model_size:
+        repo_id = model_size
+    else:
+        repo_id = _WHISPER_MODEL_SIZES.get(model_size)
+        if repo_id is None:
+            raise ValueError(
+                f"Unknown model size: {model_size!r}. "
+                f"Valid sizes: {', '.join(sorted(_WHISPER_MODEL_SIZES))}"
+            )
+
+    # Probe cache — skip download if already present (unless force)
+    if not force:
+        try:
+            from faster_whisper.utils import download_model as fw_download
+
+            return fw_download(model_size, local_files_only=True)
+        except Exception:  # ImportError, LocalEntryNotFoundError, ValueError
+            pass
+
+    # Force: delete cached snapshot if it exists
+    if force:
+        try:
+            from faster_whisper.utils import download_model as fw_download
+
+            cached = fw_download(model_size, local_files_only=True)
+            if cached and _HF_CACHE_INDICATOR in str(cached):
+                shutil.rmtree(cached)
+            elif cached:
+                raise DependencyError(
+                    f"Refusing to delete cache path outside HuggingFace cache: {cached}"
+                )
+        except DependencyError:  # re-raise the error above
+            raise
+        except Exception:  # not cached — nothing to delete
+            pass
+
+    # Download with progress bars
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError as exc:
+        raise DependencyError(
+            "huggingface_hub is required for model download. "
+            "`faster-whisper` should already have this installed."
+        ) from exc
+
+    try:
+        return snapshot_download(
+            repo_id,
+            cache_dir=cache_dir,
+            allow_patterns=_WHISPER_ALLOW_PATTERNS,
+            # No tqdm_class override → uses huggingface_hub's default hf_tqdm
+            # which shows real-time download progress bars.
+        )
+    except Exception as exc:
+        raise DependencyError(
+            f"Failed to download Whisper model {model_size!r}: {exc}"
+        ) from exc

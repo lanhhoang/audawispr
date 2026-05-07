@@ -13,7 +13,7 @@ def test_find_media_tool_reports_missing_without_crashing(
     monkeypatch.delenv("AUDAWISPR_FFMPEG", raising=False)
     monkeypatch.setattr(
         diagnostics,
-        "_find_static_ffmpeg_tool",
+        "_find_cached_ffmpeg_tool",
         lambda _: (None, "unavailable"),
     )
 
@@ -393,3 +393,59 @@ def test_install_ffmpeg_raises_on_unsupported_platform(monkeypatch, tmp_path):
 
     with pytest.raises(DependencyError, match="not available for your platform"):
         diagnostics.install_ffmpeg(prefer_system=False)
+
+
+# --- check_whisper_model_status ---
+
+
+def test_check_whisper_model_status_cached(monkeypatch):
+    """Model is in local cache."""
+
+    def fake_download(size, local_files_only=True):
+        assert local_files_only is True
+        return f"/cache/{size}/snapshots/hash"
+
+    monkeypatch.setattr("faster_whisper.utils.download_model", fake_download)
+
+    status = diagnostics.check_whisper_model_status("small")
+    assert status.cached is True
+    assert status.cache_path == "/cache/small/snapshots/hash"
+
+
+def test_check_whisper_model_status_not_cached(monkeypatch):
+    """Model is not in local cache."""
+    from huggingface_hub.errors import LocalEntryNotFoundError
+
+    def fake_download(size, local_files_only=True):
+        raise LocalEntryNotFoundError("not found")
+
+    monkeypatch.setattr("faster_whisper.utils.download_model", fake_download)
+
+    status = diagnostics.check_whisper_model_status("small")
+    assert status.cached is False
+    assert "not cached" in (status.message or "").lower()
+
+
+def test_check_whisper_model_status_faster_whisper_missing(monkeypatch):
+    """faster-whisper is not importable."""
+    import builtins
+
+    original_import = builtins.__import__
+
+    def fake_import(name, *a, **kw):
+        if name.startswith("faster_whisper"):
+            raise ImportError("No module named faster_whisper")
+        return original_import(name, *a, **kw)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    status = diagnostics.check_whisper_model_status("small")
+    assert status.cached is False
+    assert "not installed" in (status.message or "").lower()
+
+
+def test_check_whisper_model_status_invalid_size(monkeypatch):
+    """Invalid model size returns error, not crash."""
+    status = diagnostics.check_whisper_model_status("nonexistent")
+    assert status.cached is False
+    assert "Invalid model size" in (status.message or "")

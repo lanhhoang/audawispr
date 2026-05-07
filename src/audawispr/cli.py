@@ -11,7 +11,11 @@ import typer.core
 
 from audawispr.__about__ import __version__
 from audawispr.core.clipping import ClipOptions, clip_manifest_file
-from audawispr.core.diagnostics import collect_diagnostics, install_ffmpeg
+from audawispr.core.diagnostics import (
+    check_whisper_model_status,
+    collect_diagnostics,
+    install_ffmpeg,
+)
 from audawispr.core.enrichment import EnrichmentOptions, enrich_manifest_file
 from audawispr.core.errors import (
     AudawisprError,
@@ -27,7 +31,12 @@ from audawispr.core.segmentation import (
     save_inspection_tsv,
     segment_manifest,
 )
-from audawispr.core.transcription import TranscriptionOptions, transcribe_audio
+from audawispr.core.transcription import (
+    WHISPER_VALID_SIZES,
+    TranscriptionOptions,
+    download_whisper_model,
+    transcribe_audio,
+)
 
 _VERBOSE = False
 """Module-level toggle for verbose output in single-invocation CLI."""
@@ -154,6 +163,99 @@ def install_ffmpeg_command(
         typer.echo(f"ffprobe: {result.ffprobe.version or result.ffprobe.path}")
 
     if not result.ffmpeg.available or not result.ffprobe.available:
+        raise typer.Exit(code=1)
+
+
+@app.command("download-models")
+def download_models_command(
+    model_size: str = typer.Option(
+        "small",
+        "--model-size",
+        help="Model size to download. Use --list-models to see available sizes.",
+    ),
+    all_sizes: bool = typer.Option(
+        False,
+        "--all",
+        help="Download all known model sizes (confirms before starting).",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Re-download even if the model is already cached.",
+    ),
+    list_models: bool = typer.Option(
+        False,
+        "--list-models",
+        help="List available model sizes and exit.",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable JSON output.",
+    ),
+) -> None:
+    """Pre-download Whisper model(s) for offline use.
+
+    Downloads CTranslate2-converted Whisper models from HuggingFace Hub
+    and caches them locally. Subsequent ``audawispr transcribe`` calls
+    load from cache with no network access.
+    """
+    # --list-models: print sizes and exit
+    if list_models:
+        for size in sorted(WHISPER_VALID_SIZES):
+            typer.echo(size)
+        raise typer.Exit()
+
+    # Resolve which sizes to download
+    sizes_to_download: list[str]
+    if all_sizes:
+        sizes_to_download = sorted(WHISPER_VALID_SIZES)
+    else:
+        if model_size not in WHISPER_VALID_SIZES:
+            typer.echo(
+                f"Error: Unknown model size {model_size!r}. "
+                f"Use --list-models to see available sizes.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+        sizes_to_download = [model_size]
+
+    # --all confirm (skip when --json — scripts don't prompt)
+    if all_sizes and not json_output:
+        # Count cached models for informative prompt
+        cached_count = sum(
+            1 for s in sizes_to_download if check_whisper_model_status(s).cached
+        )
+        not_cached = len(sizes_to_download) - cached_count
+        typer.echo(
+            f"{len(sizes_to_download)} model(s) to process "
+            f"({cached_count} cached, {not_cached} to download). "
+            f"This may use several GB of disk space."
+        )
+        if not typer.confirm("Continue?"):
+            raise typer.Exit()
+
+    # Download each model
+    results: list[dict[str, str | bool]] = []
+    for size in sizes_to_download:
+        try:
+            was_cached_before = not force and check_whisper_model_status(size).cached
+            path = download_whisper_model(size, force=force)
+            r = {"size": size, "downloaded": not was_cached_before, "path": str(path)}
+            results.append(r)
+            if not json_output:
+                verb = "Skipped" if was_cached_before else "Downloaded"
+                typer.echo(f"{verb} {size}: {path}")
+        except (DependencyError, ValueError) as exc:
+            r = {"size": size, "downloaded": False, "error": str(exc)}
+            results.append(r)
+            if not json_output:
+                typer.echo(f"Failed to download {size}: {exc}", err=True)
+
+    if json_output:
+        typer.echo(json.dumps(results, indent=2))
+
+    if any("error" in r for r in results):
         raise typer.Exit(code=1)
 
 

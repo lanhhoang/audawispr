@@ -1,3 +1,4 @@
+import json
 import re
 
 from typer.testing import CliRunner
@@ -616,6 +617,52 @@ def test_install_ffmpeg_help() -> None:
     assert "--force" in output
     assert "--prefer-system" in output
     assert "--json" in output
+
+
+def test_download_models_list_models():
+    """--list-models prints all valid sizes and exits 0."""
+    result = runner.invoke(app, ["download-models", "--list-models"])
+    assert result.exit_code == 0
+    assert "tiny" in result.stdout
+    assert "small" in result.stdout
+    assert "large-v3" in result.stdout
+    assert "turbo" in result.stdout
+    assert "Downloaded" not in result.stdout
+
+
+def test_download_models_help():
+    """download-models --help shows expected options."""
+    result = runner.invoke(app, ["download-models", "--help"])
+    output = _normalize_terminal_output(result.stdout)
+
+    assert result.exit_code == 0
+    assert "--model-size" in output
+    assert "--all" in output
+    assert "--force" in output
+    assert "--list-models" in output
+    assert "--json" in output
+
+
+def test_download_models_reports_failure_exit_code(monkeypatch):
+    """Download failure should exit with code 1."""
+    from audawispr.core.errors import DependencyError
+
+    def fake_download(size, **kw):
+        raise DependencyError("network error")
+
+    monkeypatch.setattr(
+        "audawispr.cli.download_whisper_model",
+        fake_download,
+    )
+
+    result = runner.invoke(
+        app,
+        ["download-models", "--model-size", "tiny", "--json"],
+    )
+
+    assert result.exit_code == 1
+    assert "network error" in result.stdout
+    assert json.loads(result.stdout)[0]["error"] == "network error"
 
 
 def _normalize_terminal_output(output: str) -> str:

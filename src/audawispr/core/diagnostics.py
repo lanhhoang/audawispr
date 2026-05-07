@@ -65,6 +65,7 @@ class DiagnosticsReport:
     ffmpeg_cache_dir: str | None = None
     tools: tuple[ToolStatus, ...] = ()
     whisper: WhisperModelStatus | None = None
+    """Populated by Phase 4 doctor integration."""
 
 
 def collect_diagnostics() -> DiagnosticsReport:
@@ -466,3 +467,67 @@ def detect_platform_key() -> str:
     if sys.platform == "linux":
         return "linux_arm64" if is_arm else "linux"
     return sys.platform
+
+
+def check_whisper_model_status(model_size: str) -> WhisperModelStatus:
+    """Check if a Whisper model is cached locally without triggering download.
+
+    Uses ``faster_whisper.utils.download_model(..., local_files_only=True)``
+    to probe the HuggingFace cache. Handles missing imports gracefully.
+
+    Args:
+        model_size: Model size alias (e.g. ``"small"``, ``"medium"``).
+
+    Returns:
+        ``WhisperModelStatus`` with ``cached=True`` and the snapshot path if
+        the model is in the local cache, or ``cached=False`` with an explanation.
+    """
+    try:
+        from faster_whisper.utils import download_model
+    except ImportError:
+        return WhisperModelStatus(
+            cached=False,
+            model_size=model_size,
+            cache_path=None,
+            message="faster-whisper is not installed",
+        )
+
+    try:
+        from huggingface_hub.errors import LocalEntryNotFoundError
+    except ImportError:
+        return WhisperModelStatus(
+            cached=False,
+            model_size=model_size,
+            cache_path=None,
+            message="huggingface_hub is not installed",
+        )
+
+    try:
+        path = download_model(model_size, local_files_only=True)
+        return WhisperModelStatus(
+            cached=True,
+            model_size=model_size,
+            cache_path=str(path),
+            message=None,
+        )
+    except LocalEntryNotFoundError:
+        return WhisperModelStatus(
+            cached=False,
+            model_size=model_size,
+            cache_path=None,
+            message="model is not cached locally (will download on first use)",
+        )
+    except ValueError as exc:
+        return WhisperModelStatus(
+            cached=False,
+            model_size=model_size,
+            cache_path=None,
+            message=str(exc),
+        )
+    except Exception as exc:
+        return WhisperModelStatus(
+            cached=False,
+            model_size=model_size,
+            cache_path=None,
+            message=f"could not check cache status: {exc}",
+        )
