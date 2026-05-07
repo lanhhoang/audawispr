@@ -8,7 +8,7 @@ from audawispr.core.manifest import TranscriptSegment, TranscriptWord
 from audawispr.core.transcription import (
     TranscriptionOptions,
     _convert_segment,
-    download_whisper_model,
+    install_whisper_model,
     transcribe_audio,
 )
 
@@ -86,7 +86,7 @@ def test_convert_segment_rejects_missing_word_timestamps() -> None:
         _convert_segment(0, segment)
 
 
-def test_download_whisper_model_calls_snapshot_download(monkeypatch):
+def test_install_whisper_model_calls_snapshot_download(monkeypatch):
     """Verify the correct repo_id and allow_patterns are passed."""
     import huggingface_hub as hf
 
@@ -103,7 +103,7 @@ def test_download_whisper_model_calls_snapshot_download(monkeypatch):
         lambda *a, **kw: (_ for _ in ()).throw(FileNotFoundError("not cached")),
     )
 
-    result = download_whisper_model("small")
+    result = install_whisper_model("small")
 
     assert len(calls) == 1
     repo_id, kwargs = calls[0]
@@ -113,7 +113,7 @@ def test_download_whisper_model_calls_snapshot_download(monkeypatch):
     assert result == "/fake/cache/Systran/faster-whisper-small"
 
 
-def test_download_whisper_model_accepts_repo_id_directly(monkeypatch):
+def test_install_whisper_model_accepts_repo_id_directly(monkeypatch):
     import huggingface_hub as hf
 
     calls = []
@@ -123,17 +123,17 @@ def test_download_whisper_model_accepts_repo_id_directly(monkeypatch):
         lambda repo_id, **kw: calls.append(repo_id) or f"/path/{repo_id}",
     )
 
-    download_whisper_model("custom/model-id")
+    install_whisper_model("custom/model-id")
     assert "custom/model-id" in calls
 
 
-def test_download_whisper_model_invalid_size_raises_value_error():
+def test_install_whisper_model_invalid_size_raises_value_error():
 
     with pytest.raises(ValueError, match="Unknown model size"):
-        download_whisper_model("nonexistent-size")
+        install_whisper_model("nonexistent-size")
 
 
-def test_download_whisper_model_raises_dependency_error_on_failure(monkeypatch):
+def test_install_whisper_model_raises_dependency_error_on_failure(monkeypatch):
     import huggingface_hub as hf
 
     monkeypatch.setattr(
@@ -143,10 +143,10 @@ def test_download_whisper_model_raises_dependency_error_on_failure(monkeypatch):
     )
 
     with pytest.raises(DependencyError, match="Failed to download"):
-        download_whisper_model("small")
+        install_whisper_model("small")
 
 
-def test_download_whisper_model_skips_when_cached(monkeypatch):
+def test_install_whisper_model_skips_when_cached(monkeypatch):
     """With force=False, cached model returns path without calling snapshot_download."""
     import huggingface_hub as hf
 
@@ -158,13 +158,13 @@ def test_download_whisper_model_skips_when_cached(monkeypatch):
     )
     monkeypatch.setattr(hf, "snapshot_download", lambda *a, **kw: calls.append(1))
 
-    result = download_whisper_model("small")
+    result = install_whisper_model("small")
 
     assert len(calls) == 0  # snapshot_download NOT called
     assert "snapshots" in result
 
 
-def test_download_whisper_model_force_re_downloads(monkeypatch, tmp_path):
+def test_install_whisper_model_force_re_downloads(monkeypatch, tmp_path):
     """With force=True, cached model is deleted and re-downloaded."""
     import huggingface_hub as hf
 
@@ -202,7 +202,7 @@ def test_download_whisper_model_force_re_downloads(monkeypatch, tmp_path):
         lambda *a, **kw: dl_calls.append(1) or "/new/cache/path",
     )
 
-    result = download_whisper_model("small", force=True)
+    result = install_whisper_model("small", force=True)
 
     assert len(dl_calls) == 1  # snapshot_download was called
     assert not cache_dir.exists()  # old cache was deleted

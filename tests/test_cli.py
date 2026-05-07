@@ -651,7 +651,7 @@ def test_install_models_reports_failure_exit_code(monkeypatch):
         raise DependencyError("network error")
 
     monkeypatch.setattr(
-        "audawispr.cli.download_whisper_model",
+        "audawispr.cli.install_whisper_model",
         fake_download,
     )
 

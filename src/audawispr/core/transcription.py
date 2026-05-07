@@ -192,7 +192,7 @@ def _optional_float(
     return float(value)
 
 
-def download_whisper_model(
+def install_whisper_model(
     model_size: str,
     *,
     cache_dir: str | None = None,

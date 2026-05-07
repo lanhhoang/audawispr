@@ -34,7 +34,7 @@ from audawispr.core.segmentation import (
 from audawispr.core.transcription import (
     WHISPER_VALID_SIZES,
     TranscriptionOptions,
-    download_whisper_model,
+    install_whisper_model,
     transcribe_audio,
 )
 
@@ -240,7 +240,7 @@ def install_models_command(
     for size in sizes_to_download:
         try:
             was_cached_before = not force and check_whisper_model_status(size).cached
-            path = download_whisper_model(size, force=force)
+            path = install_whisper_model(size, force=force)
             r = {"size": size, "installed": not was_cached_before, "path": str(path)}
             results.append(r)
             if not json_output:
