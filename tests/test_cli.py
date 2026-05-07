@@ -619,20 +619,20 @@ def test_install_ffmpeg_help() -> None:
     assert "--json" in output
 
 
-def test_download_models_list_models():
+def test_install_models_list_models():
     """--list-models prints all valid sizes and exits 0."""
-    result = runner.invoke(app, ["download-models", "--list-models"])
+    result = runner.invoke(app, ["install-models", "--list-models"])
     assert result.exit_code == 0
     assert "tiny" in result.stdout
     assert "small" in result.stdout
     assert "large-v3" in result.stdout
     assert "turbo" in result.stdout
-    assert "Downloaded" not in result.stdout
+    assert "installed" not in result.stdout
 
 
-def test_download_models_help():
-    """download-models --help shows expected options."""
-    result = runner.invoke(app, ["download-models", "--help"])
+def test_install_models_help():
+    """install-models --help shows expected options."""
+    result = runner.invoke(app, ["install-models", "--help"])
     output = _normalize_terminal_output(result.stdout)
 
     assert result.exit_code == 0
@@ -643,8 +643,8 @@ def test_download_models_help():
     assert "--json" in output
 
 
-def test_download_models_reports_failure_exit_code(monkeypatch):
-    """Download failure should exit with code 1."""
+def test_install_models_reports_failure_exit_code(monkeypatch):
+    """Install failure should exit with code 1."""
     from audawispr.core.errors import DependencyError
 
     def fake_download(size, **kw):
@@ -657,7 +657,7 @@ def test_download_models_reports_failure_exit_code(monkeypatch):
 
     result = runner.invoke(
         app,
-        ["download-models", "--model-size", "tiny", "--json"],
+        ["install-models", "--model-size", "tiny", "--json"],
     )
 
     assert result.exit_code == 1

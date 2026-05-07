@@ -166,12 +166,12 @@ def install_ffmpeg_command(
         raise typer.Exit(code=1)
 
 
-@app.command("download-models")
-def download_models_command(
+@app.command("install-models")
+def install_models_command(
     model_size: str = typer.Option(
         "small",
         "--model-size",
-        help="Model size to download. Use --list-models to see available sizes.",
+        help="Model size to install. Use --list-models to see available sizes.",
     ),
     all_sizes: bool = typer.Option(
         False,
@@ -194,7 +194,7 @@ def download_models_command(
         help="Emit machine-readable JSON output.",
     ),
 ) -> None:
-    """Pre-download Whisper model(s) for offline use.
+    """Install Whisper model(s) for offline use.
 
     Downloads CTranslate2-converted Whisper models from HuggingFace Hub
     and caches them locally. Subsequent ``audawispr transcribe`` calls
@@ -241,13 +241,13 @@ def download_models_command(
         try:
             was_cached_before = not force and check_whisper_model_status(size).cached
             path = download_whisper_model(size, force=force)
-            r = {"size": size, "downloaded": not was_cached_before, "path": str(path)}
+            r = {"size": size, "installed": not was_cached_before, "path": str(path)}
             results.append(r)
             if not json_output:
-                verb = "Skipped" if was_cached_before else "Downloaded"
+                verb = "using existing" if was_cached_before else "installed"
                 typer.echo(f"{verb} {size}: {path}")
         except (DependencyError, ValueError) as exc:
-            r = {"size": size, "downloaded": False, "error": str(exc)}
+            r = {"size": size, "installed": False, "error": str(exc)}
             results.append(r)
             if not json_output:
                 typer.echo(f"Failed to download {size}: {exc}", err=True)
