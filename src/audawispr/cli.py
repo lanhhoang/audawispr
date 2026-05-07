@@ -12,6 +12,7 @@ import typer.core
 from audawispr.__about__ import __version__
 from audawispr.core.clipping import ClipOptions, clip_manifest_file
 from audawispr.core.diagnostics import (
+    DiagnosticsReport,
     check_whisper_model_status,
     collect_diagnostics,
     install_ffmpeg,
@@ -89,14 +90,68 @@ def main(
 
 
 @app.command()
-def doctor() -> None:
-    """Report local runtime readiness."""
+def doctor(
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable JSON output.",
+    ),
+) -> None:
+    """Report runtime readiness of audawispr and its dependencies."""
     report = collect_diagnostics()
 
+    if json_output:
+        payload = {
+            "package_version": report.package_version,
+            "python_version": report.python_version,
+            "platform_key": report.platform_key,
+            "cache_dir": report.cache_dir,
+            "ffmpeg_cache_dir": report.ffmpeg_cache_dir,
+            "tools": {
+                t.name: {
+                    "available": t.available,
+                    "source": t.source,
+                    "path": t.path,
+                    "version": t.version,
+                    "message": t.message,
+                }
+                for t in report.tools
+            },
+            "whisper": {
+                "cached": report.whisper.cached if report.whisper else None,
+                "model_size": report.whisper.model_size if report.whisper else None,
+                "cache_path": report.whisper.cache_path if report.whisper else None,
+                "message": report.whisper.message if report.whisper else None,
+            },
+        }
+        typer.echo(json.dumps(payload, indent=2))
+        if not _all_tools_found(report):
+            raise typer.Exit(code=1)
+        return
+
+    # Human-readable output
     typer.echo("audawispr doctor")
     typer.echo(f"Package: audawispr {report.package_version}")
     typer.echo(f"Python: {report.python_version}")
 
+    if report.platform_key:
+        typer.echo(f"Platform: {report.platform_key}")
+    if report.cache_dir:
+        typer.echo(f"Cache: {report.cache_dir}")
+    if report.ffmpeg_cache_dir:
+        typer.echo(f"FFmpeg cache: {report.ffmpeg_cache_dir}")
+
+    # Whisper status
+    if report.whisper:
+        w = report.whisper
+        if w.cached:
+            typer.echo(f"Whisper: ok (cached: {w.model_size})")
+            if w.cache_path:
+                typer.echo(f"  path: {w.cache_path}")
+        else:
+            typer.echo(f"Whisper: {w.message or 'not cached'}")
+
+    # Tool statuses
     for tool in report.tools:
         status = "ok" if tool.available else "missing"
         typer.echo(f"{tool.name}: {status} ({tool.source})")
@@ -106,6 +161,14 @@ def doctor() -> None:
             typer.echo(f"  version: {tool.version}")
         if tool.message:
             typer.echo(f"  note: {tool.message}")
+
+    if not _all_tools_found(report):
+        raise typer.Exit(code=1)
+
+
+def _all_tools_found(report: DiagnosticsReport) -> bool:
+    """Return True if all required system tools (ffmpeg, ffprobe) are available."""
+    return all(t.available for t in report.tools)
 
 
 @app.command("install-ffmpeg")

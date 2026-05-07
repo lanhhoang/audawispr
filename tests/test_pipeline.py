@@ -674,7 +674,20 @@ def test_one_shot_unknown_command_falls_back(monkeypatch, tmp_path: Path) -> Non
     assert request.output == apkg_path
 
 
-def test_known_subcommand_not_redirected() -> None:
+def test_known_subcommand_not_redirected(monkeypatch) -> None:
+    from audawispr.core.diagnostics import DiagnosticsReport, ToolStatus
+
+    monkeypatch.setattr(
+        "audawispr.cli.collect_diagnostics",
+        lambda **kw: DiagnosticsReport(
+            package_version="0.1.2",
+            python_version="3.11.0",
+            tools=(
+                ToolStatus(name="ffmpeg", available=True, source="PATH"),
+                ToolStatus(name="ffprobe", available=True, source="PATH"),
+            ),
+        ),
+    )
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 0

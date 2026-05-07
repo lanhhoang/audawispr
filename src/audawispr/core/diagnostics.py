@@ -65,21 +65,39 @@ class DiagnosticsReport:
     ffmpeg_cache_dir: str | None = None
     tools: tuple[ToolStatus, ...] = ()
     whisper: WhisperModelStatus | None = None
-    """Populated by Phase 4 doctor integration."""
+    # Populated by collect_diagnostics() — not set by default.
 
 
-def collect_diagnostics() -> DiagnosticsReport:
-    """Collect local package, Python, FFmpeg, FFprobe, and Whisper readiness."""
+def collect_diagnostics(
+    *,
+    whisper_model_size: str = "small",
+) -> DiagnosticsReport:
+    """Collect local package, Python, FFmpeg/FFprobe, and Whisper model readiness."""
+    # FFmpeg cache dir (may not exist yet — that's OK)
+    ffmpeg_cache = _ffmpeg_cache_dir_path()
+
     return DiagnosticsReport(
         package_version=__version__,
         python_version=sys.version.split()[0],
         platform_key=detect_platform_key(),
         cache_dir=str(get_cache_dir()),
+        ffmpeg_cache_dir=str(ffmpeg_cache) if ffmpeg_cache else None,
         tools=(
             find_media_tool("ffmpeg", FFMPEG_ENV),
             find_media_tool("ffprobe", FFPROBE_ENV),
         ),
+        whisper=check_whisper_model_status(whisper_model_size),
     )
+
+
+def _ffmpeg_cache_dir_path() -> Path | None:
+    """Return path to the audawispr FFmpeg cache bin dir, or None if not created."""
+    cache_dir = get_cache_dir()
+    platform_key = detect_platform_key()
+    bin_dir = cache_dir / "ffmpeg" / "bin" / platform_key
+    if bin_dir.is_dir():
+        return bin_dir
+    return None
 
 
 def find_media_tool(
