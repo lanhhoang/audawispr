@@ -175,9 +175,15 @@ def _status_for_path(name: str, path: Path, source: str) -> ToolStatus:
 
 
 def _read_tool_version(path: Path) -> tuple[str | None, str | None]:
+    """Get tool version string.
+
+    Uses `-version` only (no `-nostdin`) because ffprobe does not accept
+    `-nostdin` — it interprets it as a boolean option that consumes the
+    next token, causing a spurious "Missing argument" error.
+    """
     try:
         completed = subprocess.run(
-            [str(path), "-nostdin", "-version"],
+            [str(path), "-version"],
             check=False,
             capture_output=True,
             text=True,
@@ -249,6 +255,11 @@ def copy_ffmpeg_to_cache(
 
     ffmpeg_dst = bin_dir / _exe_name("ffmpeg")
     ffprobe_dst = bin_dir / _exe_name("ffprobe")
+
+    # Remove existing files first — shutil.copy2 fails on read-only targets
+    for dst in (ffmpeg_dst, ffprobe_dst):
+        if dst.exists():
+            dst.unlink()
 
     shutil.copy2(ffmpeg_src, ffmpeg_dst)
     shutil.copy2(ffprobe_src, ffprobe_dst)
