@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from audawispr.core.diagnostics import FFMPEG_ENV, find_media_tool
+from audawispr.core.diagnostics import ensure_ffmpeg
 from audawispr.core.errors import ClippingError
 from audawispr.core.manifest import TranscriptManifest, load_manifest, save_manifest
 
@@ -80,12 +80,7 @@ def clip_manifest_file(
     if not source_path.exists():
         raise ClippingError(f"source audio does not exist: {source_path}")
 
-    ffmpeg = find_media_tool("ffmpeg", FFMPEG_ENV)
-    if not ffmpeg.available or ffmpeg.path is None:
-        raise ClippingError(
-            "FFmpeg is not available. Install FFmpeg or set AUDAWISPR_FFMPEG."
-        )
-    ffmpeg_path = ffmpeg.path
+    ffmpeg_path = str(ensure_ffmpeg())
 
     _BITRATE_RE = re.compile(r"^\d+[kKmM]?$")
     if not _BITRATE_RE.match(opts.bitrate):

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -10,9 +11,19 @@ import typer.core
 
 from audawispr.__about__ import __version__
 from audawispr.core.clipping import ClipOptions, clip_manifest_file
-from audawispr.core.diagnostics import collect_diagnostics
+from audawispr.core.diagnostics import (
+    DiagnosticsReport,
+    check_whisper_model_status,
+    collect_diagnostics,
+    install_ffmpeg,
+)
 from audawispr.core.enrichment import EnrichmentOptions, enrich_manifest_file
-from audawispr.core.errors import AudawisprError, ClippingError, ExportError
+from audawispr.core.errors import (
+    AudawisprError,
+    ClippingError,
+    DependencyError,
+    ExportError,
+)
 from audawispr.core.export import ExportOptions, export_manifest_file
 from audawispr.core.manifest import load_manifest, save_manifest
 from audawispr.core.segmentation import (
@@ -21,7 +32,12 @@ from audawispr.core.segmentation import (
     save_inspection_tsv,
     segment_manifest,
 )
-from audawispr.core.transcription import TranscriptionOptions, transcribe_audio
+from audawispr.core.transcription import (
+    WHISPER_VALID_SIZES,
+    TranscriptionOptions,
+    install_whisper_model,
+    transcribe_audio,
+)
 
 _VERBOSE = False
 """Module-level toggle for verbose output in single-invocation CLI."""
@@ -74,14 +90,68 @@ def main(
 
 
 @app.command()
-def doctor() -> None:
-    """Report local runtime readiness."""
+def doctor(
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable JSON output.",
+    ),
+) -> None:
+    """Report runtime readiness of audawispr and its dependencies."""
     report = collect_diagnostics()
 
+    if json_output:
+        payload = {
+            "package_version": report.package_version,
+            "python_version": report.python_version,
+            "platform_key": report.platform_key,
+            "cache_dir": report.cache_dir,
+            "ffmpeg_cache_dir": report.ffmpeg_cache_dir,
+            "tools": {
+                t.name: {
+                    "available": t.available,
+                    "source": t.source,
+                    "path": t.path,
+                    "version": t.version,
+                    "message": t.message,
+                }
+                for t in report.tools
+            },
+            "whisper": {
+                "cached": report.whisper.cached if report.whisper else None,
+                "model_size": report.whisper.model_size if report.whisper else None,
+                "cache_path": report.whisper.cache_path if report.whisper else None,
+                "message": report.whisper.message if report.whisper else None,
+            },
+        }
+        typer.echo(json.dumps(payload, indent=2))
+        if not _all_tools_found(report):
+            raise typer.Exit(code=1)
+        return
+
+    # Human-readable output
     typer.echo("audawispr doctor")
     typer.echo(f"Package: audawispr {report.package_version}")
     typer.echo(f"Python: {report.python_version}")
 
+    if report.platform_key:
+        typer.echo(f"Platform: {report.platform_key}")
+    if report.cache_dir:
+        typer.echo(f"Cache: {report.cache_dir}")
+    if report.ffmpeg_cache_dir:
+        typer.echo(f"FFmpeg cache: {report.ffmpeg_cache_dir}")
+
+    # Whisper status
+    if report.whisper:
+        w = report.whisper
+        if w.cached:
+            typer.echo(f"Whisper: ok (cached: {w.model_size})")
+            if w.cache_path:
+                typer.echo(f"  path: {w.cache_path}")
+        else:
+            typer.echo(f"Whisper: {w.message or 'not cached'}")
+
+    # Tool statuses
     for tool in report.tools:
         status = "ok" if tool.available else "missing"
         typer.echo(f"{tool.name}: {status} ({tool.source})")
@@ -91,6 +161,165 @@ def doctor() -> None:
             typer.echo(f"  version: {tool.version}")
         if tool.message:
             typer.echo(f"  note: {tool.message}")
+
+    if not _all_tools_found(report):
+        raise typer.Exit(code=1)
+
+
+def _all_tools_found(report: DiagnosticsReport) -> bool:
+    """Return True if all required system tools (ffmpeg, ffprobe) are available."""
+    return all(t.available for t in report.tools)
+
+
+@app.command("install-ffmpeg")
+def install_ffmpeg_command(
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Re-download even if already installed.",
+    ),
+    prefer_system: bool = typer.Option(
+        True,
+        "--prefer-system/--no-prefer-system",
+        help="Skip install if system FFmpeg is available (default: prefer).",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable JSON output.",
+    ),
+) -> None:
+    """Install audawispr-managed FFmpeg and FFprobe binaries."""
+    try:
+        result = install_ffmpeg(prefer_system=prefer_system, force=force)
+    except AudawisprError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    if json_output:
+        typer.echo(
+            json.dumps(
+                {
+                    "installed": result.installed,
+                    "source": result.source,
+                    "cache_dir": result.cache_dir,
+                    "ffmpeg": {
+                        "found": result.ffmpeg.available,
+                        "path": result.ffmpeg.path,
+                        "version": result.ffmpeg.version,
+                    },
+                    "ffprobe": {
+                        "found": result.ffprobe.available,
+                        "path": result.ffprobe.path,
+                        "version": result.ffprobe.version,
+                    },
+                },
+                indent=2,
+            )
+        )
+    else:
+        verb = "installed" if result.installed else "using existing"
+        typer.echo(f"{verb}: {result.ffmpeg.path}")
+        typer.echo(f"source: {result.source}")
+        typer.echo(f"cache_dir: {result.cache_dir}")
+        typer.echo(f"ffmpeg: {result.ffmpeg.version or result.ffmpeg.path}")
+        typer.echo(f"ffprobe: {result.ffprobe.version or result.ffprobe.path}")
+
+    if not result.ffmpeg.available or not result.ffprobe.available:
+        raise typer.Exit(code=1)
+
+
+@app.command("install-models")
+def install_models_command(
+    model_size: str = typer.Option(
+        "small",
+        "--model-size",
+        help="Model size to install. Use --list-models to see available sizes.",
+    ),
+    all_sizes: bool = typer.Option(
+        False,
+        "--all",
+        help="Download all known model sizes (confirms before starting).",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Re-download even if the model is already cached.",
+    ),
+    list_models: bool = typer.Option(
+        False,
+        "--list-models",
+        help="List available model sizes and exit.",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable JSON output.",
+    ),
+) -> None:
+    """Install Whisper model(s) for offline use.
+
+    Downloads CTranslate2-converted Whisper models from HuggingFace Hub
+    and caches them locally. Subsequent ``audawispr transcribe`` calls
+    load from cache with no network access.
+    """
+    # --list-models: print sizes and exit
+    if list_models:
+        for size in sorted(WHISPER_VALID_SIZES):
+            typer.echo(size)
+        raise typer.Exit()
+
+    # Resolve which sizes to download
+    sizes_to_download: list[str]
+    if all_sizes:
+        sizes_to_download = sorted(WHISPER_VALID_SIZES)
+    else:
+        if model_size not in WHISPER_VALID_SIZES:
+            typer.echo(
+                f"Error: Unknown model size {model_size!r}. "
+                f"Use --list-models to see available sizes.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+        sizes_to_download = [model_size]
+
+    # --all confirm (skip when --json — scripts don't prompt)
+    if all_sizes and not json_output:
+        # Count cached models for informative prompt
+        cached_count = sum(
+            1 for s in sizes_to_download if check_whisper_model_status(s).cached
+        )
+        not_cached = len(sizes_to_download) - cached_count
+        typer.echo(
+            f"{len(sizes_to_download)} model(s) to process "
+            f"({cached_count} cached, {not_cached} to download). "
+            f"This may use several GB of disk space."
+        )
+        if not typer.confirm("Continue?"):
+            raise typer.Exit()
+
+    # Download each model
+    results: list[dict[str, str | bool]] = []
+    for size in sizes_to_download:
+        try:
+            was_cached_before = not force and check_whisper_model_status(size).cached
+            path = install_whisper_model(size, force=force)
+            r = {"size": size, "installed": not was_cached_before, "path": str(path)}
+            results.append(r)
+            if not json_output:
+                verb = "using existing" if was_cached_before else "installed"
+                typer.echo(f"{verb} {size}: {path}")
+        except (DependencyError, ValueError) as exc:
+            r = {"size": size, "installed": False, "error": str(exc)}
+            results.append(r)
+            if not json_output:
+                typer.echo(f"Failed to download {size}: {exc}", err=True)
+
+    if json_output:
+        typer.echo(json.dumps(results, indent=2))
+
+    if any("error" in r for r in results):
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -366,7 +595,7 @@ def clip(
             force=force,
         )
         clip_manifest_file(manifest, output, output_dir, options)
-    except ClippingError as exc:
+    except (ClippingError, DependencyError) as exc:
         _fail(str(exc))
 
     typer.echo(f"Wrote clipped manifest: {output}")

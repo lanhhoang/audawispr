@@ -41,3 +41,7 @@ class CancelledError(AudawisprError):
 
 class OneShotError(AudawisprError):
     """Raised when the one-shot pipeline cannot complete."""
+
+
+class DependencyError(AudawisprError):
+    """Raised when a required external dependency cannot be found or installed."""

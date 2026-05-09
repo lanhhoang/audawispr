@@ -79,7 +79,8 @@ def _read_duration_seconds(path: Path) -> float | None:
         completed = subprocess.run(
             [
                 ffprobe.path,
-                "-nostdin",
+                # NOTE: no -nostdin here — ffprobe doesn't accept it and
+                # capture_output=True already makes stdin unavailable
                 "-v",
                 "error",
                 "-show_entries",

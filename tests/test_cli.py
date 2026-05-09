@@ -1,3 +1,4 @@
+import json
 import re
 
 from typer.testing import CliRunner
@@ -39,7 +40,32 @@ def test_version_displays_package_version() -> None:
     assert f"audawispr {__version__}" in result.stdout
 
 
-def test_doctor_displays_output_shape() -> None:
+def test_doctor_displays_output_shape(monkeypatch) -> None:
+    from audawispr.core.diagnostics import DiagnosticsReport, ToolStatus
+
+    monkeypatch.setattr(
+        "audawispr.cli.collect_diagnostics",
+        lambda **kw: DiagnosticsReport(
+            package_version="0.1.2",
+            python_version="3.11.0",
+            tools=(
+                ToolStatus(
+                    name="ffmpeg",
+                    available=True,
+                    source="PATH",
+                    path="/usr/bin/ffmpeg",
+                    version="ffmpeg version 6.0",
+                ),
+                ToolStatus(
+                    name="ffprobe",
+                    available=True,
+                    source="PATH",
+                    path="/usr/bin/ffprobe",
+                    version="ffprobe version 6.0",
+                ),
+            ),
+        ),
+    )
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 0
@@ -605,6 +631,241 @@ def _make_manifest_with_words(
             )
         ],
     )
+
+
+def test_install_ffmpeg_help() -> None:
+    """install-ffmpeg --help shows expected options."""
+    result = runner.invoke(app, ["install-ffmpeg", "--help"])
+    output = _normalize_terminal_output(result.stdout)
+
+    assert result.exit_code == 0
+    assert "--force" in output
+    assert "--prefer-system" in output
+    assert "--json" in output
+
+
+def test_install_models_list_models():
+    """--list-models prints all valid sizes and exits 0."""
+    result = runner.invoke(app, ["install-models", "--list-models"])
+    assert result.exit_code == 0
+    assert "tiny" in result.stdout
+    assert "small" in result.stdout
+    assert "large-v3" in result.stdout
+    assert "turbo" in result.stdout
+    assert "installed" not in result.stdout
+
+
+def test_install_models_help():
+    """install-models --help shows expected options."""
+    result = runner.invoke(app, ["install-models", "--help"])
+    output = _normalize_terminal_output(result.stdout)
+
+    assert result.exit_code == 0
+    assert "--model-size" in output
+    assert "--all" in output
+    assert "--force" in output
+    assert "--list-models" in output
+    assert "--json" in output
+
+
+def test_install_models_reports_failure_exit_code(monkeypatch):
+    """Install failure should exit with code 1."""
+    from audawispr.core.errors import DependencyError
+
+    def fake_download(size, **kw):
+        raise DependencyError("network error")
+
+    monkeypatch.setattr(
+        "audawispr.cli.install_whisper_model",
+        fake_download,
+    )
+
+    result = runner.invoke(
+        app,
+        ["install-models", "--model-size", "tiny", "--json"],
+    )
+
+    assert result.exit_code == 1
+    assert "network error" in result.stdout
+    assert json.loads(result.stdout)[0]["error"] == "network error"
+
+
+def test_doctor_reports_platform_and_cache(monkeypatch):
+    """Doctor output includes platform, cache, and FFmpeg cache dir."""
+    from audawispr.core.diagnostics import (
+        DiagnosticsReport,
+        ToolStatus,
+        WhisperModelStatus,
+    )
+
+    monkeypatch.setattr(
+        "audawispr.cli.collect_diagnostics",
+        lambda **kw: DiagnosticsReport(
+            package_version="0.1.2",
+            python_version="3.11.0",
+            platform_key="linux",
+            cache_dir="/tmp/.cache/audawispr",
+            ffmpeg_cache_dir="/tmp/.cache/audawispr/ffmpeg/bin/linux",
+            tools=(
+                ToolStatus(
+                    name="ffmpeg",
+                    available=True,
+                    source="PATH",
+                    path="/usr/bin/ffmpeg",
+                    version="ffmpeg version 6.0",
+                ),
+                ToolStatus(
+                    name="ffprobe",
+                    available=True,
+                    source="PATH",
+                    path="/usr/bin/ffprobe",
+                    version="ffprobe version 6.0",
+                ),
+            ),
+            whisper=WhisperModelStatus(
+                cached=True,
+                model_size="small",
+                cache_path="/cache/hf/models--small/snapshots/h",
+            ),
+        ),
+    )
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0
+    assert "Platform: linux" in result.output
+    assert "Cache: /tmp/.cache/audawispr" in result.output
+    assert "FFmpeg cache:" in result.output
+    assert "Whisper: ok" in result.output
+
+
+def test_doctor_json_output(monkeypatch):
+    """Doctor --json outputs valid JSON with all fields."""
+    from audawispr.core.diagnostics import (
+        DiagnosticsReport,
+        ToolStatus,
+        WhisperModelStatus,
+    )
+
+    monkeypatch.setattr(
+        "audawispr.cli.collect_diagnostics",
+        lambda **kw: DiagnosticsReport(
+            package_version="0.1.2",
+            python_version="3.11.0",
+            platform_key="darwin_arm64",
+            cache_dir="~/Library/Caches/audawispr",
+            ffmpeg_cache_dir="~/Library/Caches/audawispr/ffmpeg/bin/darwin_arm64",
+            tools=(
+                ToolStatus(
+                    name="ffmpeg",
+                    available=True,
+                    source="PATH",
+                    path="/opt/homebrew/bin/ffmpeg",
+                    version="ffmpeg version 7.1",
+                ),
+                ToolStatus(
+                    name="ffprobe",
+                    available=True,
+                    source="PATH",
+                    path="/opt/homebrew/bin/ffprobe",
+                    version="ffprobe version 7.1",
+                ),
+            ),
+            whisper=WhisperModelStatus(
+                cached=False,
+                model_size="small",
+                cache_path=None,
+                message="model is not cached locally",
+            ),
+        ),
+    )
+    result = runner.invoke(app, ["doctor", "--json"])
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["platform_key"] == "darwin_arm64"
+    assert "tools" in payload
+    assert payload["tools"]["ffmpeg"]["available"] is True
+    assert payload["whisper"]["cached"] is False
+    assert payload["package_version"] == "0.1.2"
+
+
+def test_doctor_no_auto_install(monkeypatch):
+    """Doctor does NOT trigger any download/install."""
+    install_calls = []
+    monkeypatch.setattr(
+        "audawispr.core.diagnostics.install_ffmpeg",
+        lambda **kw: install_calls.append("install"),
+    )
+
+    runner.invoke(app, ["doctor"])
+    assert len(install_calls) == 0
+
+
+def test_doctor_exit_code_1_when_tools_missing(monkeypatch):
+    """Missing required tools cause exit code 1."""
+    from audawispr.core.diagnostics import DiagnosticsReport, ToolStatus
+
+    monkeypatch.setattr(
+        "audawispr.cli.collect_diagnostics",
+        lambda **kw: DiagnosticsReport(
+            package_version="0.1.2",
+            python_version="3.11.0",
+            tools=(
+                ToolStatus(
+                    name="ffmpeg",
+                    available=False,
+                    source="missing",
+                    path=None,
+                    message="not found",
+                ),
+                ToolStatus(
+                    name="ffprobe",
+                    available=False,
+                    source="missing",
+                    path=None,
+                    message="not found",
+                ),
+            ),
+        ),
+    )
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 1
+
+
+def test_doctor_exit_code_0_on_success(monkeypatch):
+    """All tools available: exit code 0."""
+    from audawispr.core.diagnostics import (
+        DiagnosticsReport,
+        ToolStatus,
+        WhisperModelStatus,
+    )
+
+    monkeypatch.setattr(
+        "audawispr.cli.collect_diagnostics",
+        lambda **kw: DiagnosticsReport(
+            package_version="0.1.2",
+            python_version="3.11.0",
+            tools=(
+                ToolStatus(
+                    name="ffmpeg",
+                    available=True,
+                    source="PATH",
+                    path="/usr/bin/ffmpeg",
+                ),
+                ToolStatus(
+                    name="ffprobe",
+                    available=True,
+                    source="PATH",
+                    path="/usr/bin/ffprobe",
+                ),
+            ),
+            whisper=WhisperModelStatus(
+                cached=True,
+                model_size="small",
+                cache_path="/cache/path",
+            ),
+        ),
+    )
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0
 
 
 def _normalize_terminal_output(output: str) -> str:
