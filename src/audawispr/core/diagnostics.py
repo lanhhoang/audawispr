@@ -258,8 +258,7 @@ def copy_ffmpeg_to_cache(
 
     # Remove existing files first — shutil.copy2 fails on read-only targets
     for dst in (ffmpeg_dst, ffprobe_dst):
-        if dst.exists():
-            dst.unlink()
+        dst.unlink(missing_ok=True)
 
     shutil.copy2(ffmpeg_src, ffmpeg_dst)
     shutil.copy2(ffprobe_src, ffprobe_dst)
