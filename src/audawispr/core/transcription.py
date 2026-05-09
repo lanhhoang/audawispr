@@ -7,6 +7,7 @@ used in tight loops.
 
 from __future__ import annotations
 
+import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,7 +60,7 @@ _WHISPER_ALLOW_PATTERNS: list[str] = [
 
 WHISPER_VALID_SIZES: frozenset[str] = frozenset(_WHISPER_MODEL_SIZES)
 
-_HF_CACHE_INDICATOR = ".cache/huggingface"
+_HF_CACHE_INDICATOR = os.path.join(".cache", "huggingface")
 
 
 @dataclass(frozen=True)
