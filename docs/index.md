@@ -30,6 +30,10 @@ audawispr lesson.mp3 --output deck.apkg --language fr --ipa
 - **Enrichment** — Optional French IPA phonetic transcription.
 - **Clipping** — Extracts audio snippets for each segment using FFmpeg.
 - **Export** — Anki-compatible CSV or native `.apkg` packages with embedded audio.
+- **Auto-download** — One-shot FFmpeg install and Whisper model pre-caching for
+  fully offline setups.
+- **Diagnostics** — The ``doctor`` command checks Python, FFmpeg, and Whisper
+  readiness with optional JSON output.
 - **One-shot CLI** — Single command runs the full pipeline.
 
 ## API Reference

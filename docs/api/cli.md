@@ -18,6 +18,55 @@ audawispr doctor
 
 Checks package version, Python version, and FFmpeg/FFprobe availability.
 
+### `--json` flag
+
+Output machine-readable JSON including platform key, cache directory, FFmpeg cache
+directory, tool status, and Whisper model cache status.
+
+```sh
+audawispr doctor --json
+```
+
+## install-ffmpeg
+
+Install audawispr-managed FFmpeg and FFprobe binaries via static-ffmpeg to the
+shared audawispr cache (~/Library/Caches/audawispr on macOS).
+
+```sh
+audawispr install-ffmpeg
+```
+
+Options:
+
+| Option | Default | Description |
+|---|---|---|
+| `--force` | disabled | Re-download even if already installed |
+| `--prefer-system/--no-prefer-system` | prefer | Skip install if system FFmpeg is available |
+| `--json` | disabled | Output machine-readable JSON |
+
+On first run, downloads FFmpeg ~8.x binaries, copies them to the audawispr
+cache, and records version metadata. Subsequent runs skip the download.
+
+## install-models
+
+Pre-download Whisper model(s) from HuggingFace Hub for offline use.
+
+```sh
+audawispr install-models --model-size small
+```
+
+Options:
+
+| Option | Default | Description |
+|---|---|---|
+| `--model-size` | `small` | Model size to download |
+| `--all` | disabled | Download all known model sizes (prompts before starting) |
+| `--force` | disabled | Re-download even if already cached |
+| `--list-models` | disabled | List available model sizes and exit |
+| `--json` | disabled | Output machine-readable JSON |
+
+Uses `huggingface_hub.snapshot_download()` directly for real progress bars.
+
 ## validate
 
 Validate a transcript manifest schema and timestamps.
@@ -127,3 +176,12 @@ audawispr <audio> --output <deck.apkg> [options]
 
 Accepts all options from the individual subcommands. The pipeline runs
 transcription, segmentation, enrichment, clipping, and export in sequence.
+
+Options:
+
+| Option | Default | Description |
+|---|---|---|
+| `--keep-work` | disabled | Preserve the working directory after completion |
+
+The working directory is cleaned up automatically on success. Use ``--keep-work``
+to inspect intermediate files.
