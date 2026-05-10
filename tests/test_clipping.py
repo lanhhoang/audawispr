@@ -493,6 +493,41 @@ def test_source_audio_rejects_symlink(tmp_path: Path) -> None:
         clip_manifest_file(manifest_path, output_manifest, tmp_path / "media")
 
 
+def test_source_audio_outside_manifest_dir_succeeds(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Clipping succeeds when source audio is outside the manifest directory."""
+    audio_dir = tmp_path / "audio_dir"
+    audio_dir.mkdir()
+    source_audio = audio_dir / "source.mp3"
+    source_audio.write_bytes(b"fake audio data")
+
+    manifest_dir = tmp_path / "manifest_dir"
+    manifest_dir.mkdir()
+    manifest = _make_manifest(path=str(source_audio))
+    manifest_path = _write_manifest(manifest_dir, manifest)
+    output_manifest = manifest_dir / "clipped.json"
+    output_dir = manifest_dir / "media"
+    output_dir.mkdir()
+
+    def fake_run(args: list[str], *a: object, **kw: object) -> object:
+        snippet = Path(args[-1])
+        snippet.parent.mkdir(parents=True, exist_ok=True)
+        snippet.write_bytes(b"fake audio data")
+
+        class FakeResult:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return FakeResult()
+
+    monkeypatch.setattr("audawispr.core.clipping.subprocess.run", fake_run)
+
+    # Should not raise ClippingError
+    clip_manifest_file(manifest_path, output_manifest, output_dir)
+
+
 # --- B3: _compute_audio_file fallback test ---
 
 

@@ -69,14 +69,6 @@ def clip_manifest_file(
             f"source audio is a symlink, refusing to process: {source_path}"
         )
 
-    # B2: Scope check — source audio must be within the manifest's directory tree
-    try:
-        source_path.resolve().relative_to(input_manifest.resolve().parent)
-    except ValueError:
-        raise ClippingError(
-            f"source audio is outside the manifest directory: {source_path}"
-        ) from None
-
     if not source_path.exists():
         raise ClippingError(f"source audio does not exist: {source_path}")
 
