@@ -84,8 +84,8 @@ ANKI_MODEL = genanki.Model(
         {
             "name": "Card 1",
             "qfmt": (
-                '<div class="source-text">{{hint:SourceText}}</div>'
-                '<div class="audio">{{hint:Audio}}</div>'
+                '<div class="source-text">{{SourceText}}</div>'
+                '<div class="audio">{{Audio}}</div>'
             ),
             "afmt": (
                 '{{FrontSide}}<hr id="answer">'
