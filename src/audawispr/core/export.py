@@ -72,7 +72,7 @@ ANKI_MODEL = genanki.Model(
     MODEL_ID,
     MODEL_NAME,
     fields=[
-        {"name": "SourceText"},
+        {"name": "Sentence"},
         {"name": "Audio"},
         {"name": "IPA"},
         {"name": "Translation"},
@@ -84,7 +84,7 @@ ANKI_MODEL = genanki.Model(
         {
             "name": "Card 1",
             "qfmt": (
-                '<div class="source-text">{{SourceText}}</div>'
+                '<div class="source-text">{{Sentence}}</div>'
                 '<div class="audio">{{Audio}}</div>'
             ),
             "afmt": (
@@ -167,7 +167,7 @@ def _export_csv(
             writer = csv.writer(temp_file, lineterminator="\n")
             writer.writerow(
                 [
-                    "SourceText",
+                    "Sentence",
                     "Audio",
                     "IPA",
                     "Translation",

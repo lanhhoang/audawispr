@@ -109,7 +109,7 @@ def test_export_field_order(tmp_path: Path) -> None:
     lines = csv_path.read_text(encoding="utf-8").splitlines()
     header = lines[0].split(",")
     assert header == [
-        "SourceText",
+        "Sentence",
         "Audio",
         "IPA",
         "Translation",

@@ -134,7 +134,7 @@ Export a clipped manifest for Anki import:
 audawispr export out/clipped.json --format anki-csv --output out/anki-csv
 ```
 
-`export` reads a clipped manifest, copies audio snippets, and writes `out/anki-csv/cards.csv` with columns `SourceText`, `Audio`, `IPA`, `Translation`, `SourceFile`, `TimestampRange`, and `SegmentId`. Audio references use Anki's `[sound:...]` syntax.
+`export` reads a clipped manifest, copies audio snippets, and writes `out/anki-csv/cards.csv` with columns `Sentence`, `Audio`, `IPA`, `Translation`, `SourceFile`, `TimestampRange`, and `SegmentId`. Audio references use Anki's `[sound:...]` syntax.
 
 Manual import in Anki Desktop: File → Import → select `cards.csv`, set "Fields separated by: Comma", and copy the `media/` folder contents into your Anki `collection.media` folder.
 
