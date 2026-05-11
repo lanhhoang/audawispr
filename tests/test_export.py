@@ -109,7 +109,7 @@ def test_export_field_order(tmp_path: Path) -> None:
     lines = csv_path.read_text(encoding="utf-8").splitlines()
     header = lines[0].split(",")
     assert header == [
-        "SourceText",
+        "Sentence",
         "Audio",
         "IPA",
         "Translation",
@@ -383,6 +383,34 @@ def test_export_apkg_card_template(tmp_path: Path) -> None:
     assert "source-text" in models_json
     assert "metadata" in models_json
     assert "&middot;" in models_json
+
+
+def test_export_apkg_generates_cards_for_each_note(tmp_path: Path) -> None:
+    """Regression: every note must generate exactly one card (single-template model).
+
+    The genanki library's _req computation fails on {{hint:FieldName}} Mustache
+    syntax, causing zero cards when any optional field (IPA, Translation) is empty.
+    """
+    manifest = _make_clipped_manifest(tmp_path)
+    _make_snippets(tmp_path, manifest)
+    manifest_path = _write_manifest(tmp_path, manifest)
+    apkg_path = tmp_path / "deck.apkg"
+
+    export_manifest_file(manifest_path, apkg_path)
+
+    extract_dir = tmp_path / "extract"
+    extract_dir.mkdir()
+    with zipfile.ZipFile(apkg_path, "r") as zf:
+        zf.extract("collection.anki2", extract_dir)
+
+    conn = sqlite3.connect(extract_dir / "collection.anki2")
+    note_count = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+    card_count = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+    conn.close()
+
+    assert note_count == 2
+    # Single-template model: every note should generate exactly 1 card
+    assert card_count == note_count
 
 
 def test_export_apkg_stable_guid(tmp_path: Path) -> None:
